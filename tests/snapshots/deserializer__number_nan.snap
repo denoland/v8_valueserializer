@@ -1,0 +1,10 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\nnew Number(NaN)"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {0: NumberObject(NaN)}
+

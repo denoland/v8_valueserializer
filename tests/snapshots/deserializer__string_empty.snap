@@ -1,0 +1,10 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\n''"
+---
+=== VALUE ===
+String(OneByte(""))
+
+=== HEAP ===
+Heap {}
+

@@ -1,0 +1,10 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\n-1.1"
+---
+=== VALUE ===
+Double(-1.1)
+
+=== HEAP ===
+Heap {}
+

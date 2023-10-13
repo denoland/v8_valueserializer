@@ -1,0 +1,10 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\n1"
+---
+=== VALUE ===
+I32(1)
+
+=== HEAP ===
+Heap {}
+

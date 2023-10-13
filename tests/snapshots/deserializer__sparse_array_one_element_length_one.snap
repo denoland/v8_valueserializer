@@ -1,0 +1,16 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\n\nconst arr = new Array(1);\narr[0] = 1;\narr\n"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: SparseArray(1) {
+        0: I32(
+            1,
+        ),
+    },
+}
+

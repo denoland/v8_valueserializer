@@ -1,0 +1,10 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\ntrue"
+---
+=== VALUE ===
+Bool(true)
+
+=== HEAP ===
+Heap {}
+

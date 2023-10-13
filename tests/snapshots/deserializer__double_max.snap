@@ -1,0 +1,10 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\n1.7976931348623157e+308"
+---
+=== VALUE ===
+Double(1.7976931348623157e308)
+
+=== HEAP ===
+Heap {}
+

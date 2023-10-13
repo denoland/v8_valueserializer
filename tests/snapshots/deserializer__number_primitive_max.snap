@@ -1,0 +1,14 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\nnew Number(1.7976931348623157e+308)"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: NumberObject(
+        1.7976931348623157e308,
+    ),
+}
+

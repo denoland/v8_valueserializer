@@ -1,0 +1,14 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\nObject(18446744073709551615n)"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: BigIntObject(
+        18446744073709551615,
+    ),
+}
+

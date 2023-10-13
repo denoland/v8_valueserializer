@@ -1,0 +1,23 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\nnew Map([[{ a: true }, 1]])"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Map {
+        HeapReference(
+            *1,
+        ): I32(
+            1,
+        ),
+    },
+    1: Object {
+        OneByte("a"): Bool(
+            true,
+        ),
+    },
+}
+

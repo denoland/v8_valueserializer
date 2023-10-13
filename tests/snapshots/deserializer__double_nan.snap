@@ -1,0 +1,10 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\nNaN"
+---
+=== VALUE ===
+Double(NaN)
+
+=== HEAP ===
+Heap {}
+

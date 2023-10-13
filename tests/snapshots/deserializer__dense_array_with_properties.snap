@@ -1,0 +1,23 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\n\nconst arr =[\"asd\", 1];\narr.foo = \"bar\";\narr\n"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: DenseArray [
+        String(
+            OneByte("asd"),
+        ),
+        I32(
+            1,
+        ),
+    ] {
+        OneByte("foo"): String(
+            OneByte("bar"),
+        ),
+    },
+}
+

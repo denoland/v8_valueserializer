@@ -1,0 +1,14 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\nnew Date(0)"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Date {
+        time_since_epoch: 0.0,
+    },
+}
+

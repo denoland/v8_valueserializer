@@ -1,0 +1,16 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\n{\"1\": 2}"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Object {
+        1: I32(
+            2,
+        ),
+    },
+}
+

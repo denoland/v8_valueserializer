@@ -1,0 +1,10 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\n'asd 🌎'"
+---
+=== VALUE ===
+String(TwoByte("asd 🌎"))
+
+=== HEAP ===
+Heap {}
+

@@ -1,0 +1,14 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\nnew Number(-Infinity)"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: NumberObject(
+        -inf,
+    ),
+}
+
