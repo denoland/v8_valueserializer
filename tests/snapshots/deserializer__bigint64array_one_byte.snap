@@ -1,6 +1,6 @@
 ---
 source: tests/deserializer.rs
-description: "=== SOURCE ===\nnew Int8Array([1, -2])"
+description: "=== SOURCE ===\nnew BigInt64Array([-1n])"
 ---
 === VALUE ===
 HeapReference(*1)
@@ -9,16 +9,22 @@ HeapReference(*1)
 Heap {
     0: ArrayBuffer {
         data: [
-            1,
-            254,
+            255,
+            255,
+            255,
+            255,
+            255,
+            255,
+            255,
+            255,
         ],
         max_byte_length: None,
     },
     1: ArrayBufferView {
-        kind: Int8Array,
+        kind: BigInt64Array,
         buffer: *0,
         byte_offset: 0,
-        length: 2,
+        length: 1,
         is_length_tracking: false,
         is_backed_by_rab: false,
     },

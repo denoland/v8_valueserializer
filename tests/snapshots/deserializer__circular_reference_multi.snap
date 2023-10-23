@@ -1,0 +1,21 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\nconst a = { b: {} }; a.b.a = a; a"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Object {
+        OneByte("b"): HeapReference(
+            *1,
+        ),
+    },
+    1: Object {
+        OneByte("a"): HeapReference(
+            *0,
+        ),
+    },
+}
+

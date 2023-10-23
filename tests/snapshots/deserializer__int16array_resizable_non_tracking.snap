@@ -1,0 +1,30 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\nnew Uint16Array(new ArrayBuffer(4, { maxByteLength: 10 })).subarray(0, 1)"
+---
+=== VALUE ===
+HeapReference(*1)
+
+=== HEAP ===
+Heap {
+    0: ArrayBuffer {
+        data: [
+            0,
+            0,
+            0,
+            0,
+        ],
+        max_byte_length: Some(
+            10,
+        ),
+    },
+    1: ArrayBufferView {
+        kind: Uint16Array,
+        buffer: *0,
+        byte_offset: 0,
+        length: 1,
+        is_length_tracking: false,
+        is_backed_by_rab: true,
+    },
+}
+

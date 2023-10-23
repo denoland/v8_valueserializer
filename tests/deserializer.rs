@@ -158,19 +158,53 @@ deserialize_test!(uint8clampedarray_resizable_non_tracking r#"new Uint8ClampedAr
 
 // int8array
 deserialize_test!(int8array_empty r#"new Int8Array()"#);
-deserialize_test!(int8array_one_byte r#"new Int8Array([1])"#);
-deserialize_test!(int8array_two_bytes r#"new Int8Array([1, 2])"#);
+deserialize_test!(int8array_one_byte r#"new Int8Array([-1])"#);
+deserialize_test!(int8array_two_bytes r#"new Int8Array([1, -2])"#);
 deserialize_test!(int8array_resizable r#"new Int8Array(new ArrayBuffer(2, { maxByteLength: 10 }))"#);
 deserialize_test!(int8array_resizable_non_tracking r#"new Int8Array(new ArrayBuffer(2, { maxByteLength: 10 })).subarray(0, 1)"#);
 
-// #[test]
-// fn test_object_references() {
-//   let input = [
-//     255, 15, 65, 2, 68, 0, 0, 0, 0, 0, 0, 240, 63, 94, 1, 36, 0, 2,
-//   ];
-//   let (value, heap) = parse_v8(&input).unwrap();
-//   let array = heap_value!(value, heap);
-//   assert_matches!(array, HeapValue::DenseArray(array) => {
-//     println!("{:?}", array);
-//   });
-// }
+// uint16array
+deserialize_test!(uint16array_empty r#"new Uint16Array()"#);
+deserialize_test!(uint16array_one_byte r#"new Uint16Array([1])"#);
+deserialize_test!(uint16array_two_bytes r#"new Uint16Array([1, 2])"#);
+deserialize_test!(uint16array_resizable r#"new Uint16Array(new ArrayBuffer(2, { maxByteLength: 10 }))"#);
+deserialize_test!(uint16array_resizable_non_tracking r#"new Uint16Array(new ArrayBuffer(4, { maxByteLength: 10 })).subarray(0, 1)"#);
+
+// int16array
+deserialize_test!(int16array_empty r#"new Int16Array()"#);
+deserialize_test!(int16array_one_byte r#"new Int16Array([-1])"#);
+deserialize_test!(int16array_two_bytes r#"new Int16Array([1, -2])"#);
+deserialize_test!(int16array_resizable r#"new Int16Array(new ArrayBuffer(2, { maxByteLength: 10 }))"#);
+deserialize_test!(int16array_resizable_non_tracking r#"new Uint16Array(new ArrayBuffer(4, { maxByteLength: 10 })).subarray(0, 1)"#);
+
+// uint32array
+deserialize_test!(uint32array_empty r#"new Uint32Array()"#);
+deserialize_test!(uint32array_one_byte r#"new Uint32Array([1])"#);
+deserialize_test!(uint32array_two_bytes r#"new Uint32Array([1, 2])"#);
+deserialize_test!(uint32array_resizable r#"new Uint32Array(new ArrayBuffer(4, { maxByteLength: 12 }))"#);
+deserialize_test!(uint32array_resizable_non_tracking r#"new Uint32Array(new ArrayBuffer(8, { maxByteLength: 12 })).subarray(0, 1)"#);
+
+// int32array
+deserialize_test!(int32array_empty r#"new Int32Array()"#);
+deserialize_test!(int32array_one_byte r#"new Int32Array([-1])"#);
+deserialize_test!(int32array_two_bytes r#"new Int32Array([1, -2])"#);
+deserialize_test!(int32array_resizable r#"new Int32Array(new ArrayBuffer(4, { maxByteLength: 12 }))"#);
+deserialize_test!(int32array_resizable_non_tracking r#"new Int32Array(new ArrayBuffer(8, { maxByteLength: 12 })).subarray(0, 1)"#);
+
+// biguint64array
+deserialize_test!(biguint64array_empty r#"new BigUint64Array()"#);
+deserialize_test!(biguint64array_one_byte r#"new BigUint64Array([1n])"#);
+deserialize_test!(biguint64array_two_bytes r#"new BigUint64Array([1n, 2n])"#);
+deserialize_test!(biguint64array_resizable r#"new BigUint64Array(new ArrayBuffer(8, { maxByteLength: 16 }))"#);
+deserialize_test!(biguint64array_resizable_non_tracking r#"new BigUint64Array(new ArrayBuffer(16, { maxByteLength: 24 })).subarray(0, 1)"#);
+
+// bigint64array
+deserialize_test!(bigint64array_empty r#"new BigInt64Array()"#);
+deserialize_test!(bigint64array_one_byte r#"new BigInt64Array([-1n])"#);
+deserialize_test!(bigint64array_two_bytes r#"new BigInt64Array([1n, -2n])"#);
+deserialize_test!(bigint64array_resizable r#"new BigInt64Array(new ArrayBuffer(8, { maxByteLength: 16 }))"#);
+deserialize_test!(bigint64array_resizable_non_tracking r#"new BigInt64Array(new ArrayBuffer(16, { maxByteLength: 24 })).subarray(0, 1)"#);
+
+// circular reference
+deserialize_test!(circular_reference r#"const foo = {}; foo.foo = foo; foo"#);
+deserialize_test!(circular_reference_multi r#"const a = { b: {} }; a.b.a = a; a"#);

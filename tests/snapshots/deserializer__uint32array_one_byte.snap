@@ -1,6 +1,6 @@
 ---
 source: tests/deserializer.rs
-description: "=== SOURCE ===\nnew Int8Array([1, -2])"
+description: "=== SOURCE ===\nnew Uint32Array([1])"
 ---
 === VALUE ===
 HeapReference(*1)
@@ -10,15 +10,17 @@ Heap {
     0: ArrayBuffer {
         data: [
             1,
-            254,
+            0,
+            0,
+            0,
         ],
         max_byte_length: None,
     },
     1: ArrayBufferView {
-        kind: Int8Array,
+        kind: Uint32Array,
         buffer: *0,
         byte_offset: 0,
-        length: 2,
+        length: 1,
         is_length_tracking: false,
         is_backed_by_rab: false,
     },
