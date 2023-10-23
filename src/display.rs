@@ -174,6 +174,11 @@ impl<'h, W: Write> Displayer<'h, W> {
         HeapValue::ArrayBufferView(view) => {
           visit_and_record!(heap, deps, referrer, view.buffer);
         }
+        HeapValue::Error(err) => {
+          if let Some(Value::HeapReference(referred)) = err.cause {
+            visit_and_record!(heap, deps, referrer, referred);
+          }
+        }
       }
 
       deps.order.push(referrer);
@@ -506,6 +511,7 @@ impl<'h, W: Write> Displayer<'h, W> {
       }
       HeapValue::ArrayBuffer(_) => todo!(),
       HeapValue::ArrayBufferView(_) => todo!(),
+      HeapValue::Error(_) => todo!(),
     }
     Ok(())
   }

@@ -116,27 +116,27 @@ pub enum ArrayBufferViewTag {
   DataView = b'?',
 }
 
-// /// https://source.chromium.org/chromium/chromium/src/+/main:v8/src/objects/value-serializer.cc;l=93;drc=f5bdc89c7395ed24f1b8d196a3bdd6232d5bf771;bpv=1;bpt=1
-// pub struct ErrorTag(u8);
-
-// impl ErrorTag {
-//   pub const EVAL_ERROR_PROTOTYPE: Self = Self(b'E');
-//   // The error is a RangeError. No accompanying data.
-//   pub const RANGE_ERROR_PROTOTYPE: Self = Self(b'R');
-//   // The error is a ReferenceError. No accompanying data.
-//   pub const REFERENCE_ERROR_PROTOTYPE: Self = Self(b'F');
-//   // The error is a SyntaxError. No accompanying data.
-//   pub const SYNTAX_ERROR_PROTOTYPE: Self = Self(b'S');
-//   // The error is a TypeError. No accompanying data.
-//   pub const TYPE_ERROR_PROTOTYPE: Self = Self(b'T');
-//   // The error is a URIError. No accompanying data.
-//   pub const URI_ERROR_PROTOTYPE: Self = Self(b'U');
-//   // Followed by message: string.
-//   pub const MESSAGE: Self = Self(b'm');
-//   // Followed by a JS object: cause.
-//   pub const CAUSE: Self = Self(b'c');
-//   // Followed by stack: string.
-//   pub const STACK: Self = Self(b's');
-//   // The end of this error information.
-//   pub const END: Self = Self(b'.');
-// }
+/// https://source.chromium.org/chromium/chromium/src/+/main:v8/src/objects/value-serializer.cc;l=93;drc=f5bdc89c7395ed24f1b8d196a3bdd6232d5bf771;bpv=1;bpt=1#[repr(u8)]
+#[repr(u8)]
+pub enum ErrorTag {
+  /// The error is a EvalError. No accompanying data.
+  EvalErrorPrototype = b'E',
+  /// The error is a RangeError. No accompanying data.
+  RangeErrorPrototype = b'R',
+  /// The error is a ReferenceError. No accompanying data.
+  ReferenceErrorPrototype = b'F',
+  /// The error is a SyntaxError. No accompanying data.
+  SyntaxErrorPrototype = b'S',
+  /// The error is a TypeError. No accompanying data.
+  TypeErrorPrototype = b'T',
+  /// The error is a URIError. No accompanying data.
+  UriErrorPrototype = b'U',
+  /// Followed by message: string.
+  Message = b'm',
+  /// Followed by a JS object: cause.
+  Cause = b'c',
+  /// Followed by stack: string.
+  Stack = b's',
+  /// The end of this error information.
+  End = b'.',
+}

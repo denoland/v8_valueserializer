@@ -208,3 +208,6 @@ deserialize_test!(bigint64array_resizable_non_tracking r#"new BigInt64Array(new 
 // circular reference
 deserialize_test!(circular_reference r#"const foo = {}; foo.foo = foo; foo"#);
 deserialize_test!(circular_reference_multi r#"const a = { b: {} }; a.b.a = a; a"#);
+
+// error
+deserialize_test!(error r#"new Error("foo", { cause: 1 })"#);

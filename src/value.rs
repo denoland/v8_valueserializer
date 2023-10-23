@@ -221,6 +221,8 @@ pub enum HeapValue {
   /// new BigUint64Array(buffer, byteOffset, length)
   /// new DataView(buffer, byteOffset, byteLength)
   ArrayBufferView(ArrayBufferView),
+  /// new Error(message, { cause: "foo" })
+  Error(Error),
 }
 
 impl std::fmt::Debug for HeapValue {
@@ -247,6 +249,7 @@ impl std::fmt::Debug for HeapValue {
       Self::Set(set) => std::fmt::Debug::fmt(set, f),
       Self::ArrayBuffer(ab) => std::fmt::Debug::fmt(ab, f),
       Self::ArrayBufferView(view) => std::fmt::Debug::fmt(view, f),
+      Self::Error(err) => std::fmt::Debug::fmt(err, f),
     }
   }
 }
@@ -448,8 +451,22 @@ pub struct ArrayBufferView {
 }
 
 #[derive(Debug)]
-pub struct SharedArrayBuffer {
-  pub id: u32,
+pub enum ErrorKind {
+  Error,
+  EvalError,
+  RangeError,
+  ReferenceError,
+  SyntaxError,
+  TypeError,
+  UriError,
+}
+
+#[derive(Debug)]
+pub struct Error {
+  pub kind: ErrorKind,
+  pub message: Option<StringValue>,
+  pub stack: Option<StringValue>,
+  pub cause: Option<Value>,
 }
 
 pub struct HeapBuilder {

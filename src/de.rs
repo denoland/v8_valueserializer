@@ -7,12 +7,15 @@ use std::string::FromUtf8Error;
 use thiserror::Error;
 
 use crate::tags::ArrayBufferViewTag;
+use crate::tags::ErrorTag;
 use crate::tags::SerializationTag;
 use crate::value::ArrayBuffer;
 use crate::value::ArrayBufferView;
 use crate::value::ArrayBufferViewKind;
 use crate::value::Date;
 use crate::value::DenseArray;
+use crate::value::Error;
+use crate::value::ErrorKind;
 use crate::value::Heap;
 use crate::value::HeapBuilder;
 use crate::value::HeapValue;
@@ -48,6 +51,8 @@ pub enum ParseErrorKind {
   InvalidWireFormatVersion(u32),
   #[error("unexpected tag {0:?}")]
   UnexpectedTag(u8),
+  #[error("unexpected error tag {0:?}")]
+  UnexpectedErrorTag(u8),
   #[error("invalid utf8 string: {0}")]
   InvalidUtf8String(FromUtf8Error),
   #[error("invalid one byte string")]
@@ -287,7 +292,11 @@ fn read_object_internal(
   } else if tag == SerializationTag::SharedArrayBuffer as u8 {
     Err(input.err(ParseErrorKind::SharedArrayBufferNotSupported))
   } else if tag == SerializationTag::Error as u8 {
-    todo!("Error")
+    let reference = heap.reserve();
+    let error = read_js_error(de, input, heap)?;
+    let heap_value = HeapValue::Error(error);
+    heap.insert_reserved(reference, heap_value);
+    Ok(Value::HeapReference(reference))
   } else if tag == SerializationTag::WasmModuleTransfer as u8 {
     Err(input.err(ParseErrorKind::WasmModuleTransferNotSupported))
   } else if tag == SerializationTag::WasmMemoryTransfer as u8 {
@@ -694,6 +703,53 @@ fn read_transferred_js_array_buffer(
     return Err(input.err(ParseErrorKind::MissingTransferredArrayBuffer(id)))
   };
   Ok(ab)
+}
+
+fn read_js_error(
+  de: &mut ValueDeserializer,
+  input: &mut Input<'_>,
+  heap: &mut HeapBuilder,
+) -> Result<Error, ParseError> {
+  let mut kind = ErrorKind::Error;
+  let mut message = None;
+  let mut cause = None;
+  let mut stack = None;
+  loop {
+    let tag = input.read_byte()?;
+    if tag == ErrorTag::EvalErrorPrototype as u8 {
+      kind = ErrorKind::EvalError;
+    } else if tag == ErrorTag::RangeErrorPrototype as u8 {
+      kind = ErrorKind::RangeError;
+    } else if tag == ErrorTag::ReferenceErrorPrototype as u8 {
+      kind = ErrorKind::ReferenceError;
+    } else if tag == ErrorTag::SyntaxErrorPrototype as u8 {
+      kind = ErrorKind::SyntaxError;
+    } else if tag == ErrorTag::TypeErrorPrototype as u8 {
+      kind = ErrorKind::TypeError;
+    } else if tag == ErrorTag::UriErrorPrototype as u8 {
+      kind = ErrorKind::UriError;
+    } else if tag == ErrorTag::Message as u8 {
+      let str = read_string(input)?;
+      message = Some(str);
+    } else if tag == ErrorTag::Stack as u8 {
+      let str = read_string(input)?;
+      stack = Some(str);
+    } else if tag == ErrorTag::Cause as u8 {
+      let obj = read_object(de, input, heap)?;
+      cause = Some(obj);
+    } else if tag == ErrorTag::End as u8 {
+      break;
+    } else {
+      return Err(input.err(ParseErrorKind::UnexpectedErrorTag(tag)));
+    }
+  }
+
+  Ok(Error {
+    kind,
+    message,
+    stack,
+    cause,
+  })
 }
 
 impl<'a> Input<'a> {
