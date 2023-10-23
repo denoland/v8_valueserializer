@@ -15,7 +15,8 @@ fn test_serialize() {
   "#,
     )
     .unwrap();
-  let (value, heap) = v8_valueserializer::parse_v8(&data).unwrap();
+  let de = v8_valueserializer::ValueDeserializer::default();
+  let (value, heap) = de.read(&data).unwrap();
   let new_code = display(&heap, &value);
   println!("{}", new_code);
 }

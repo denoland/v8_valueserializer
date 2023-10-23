@@ -447,6 +447,11 @@ pub struct ArrayBufferView {
   pub is_backed_by_rab: bool,
 }
 
+#[derive(Debug)]
+pub struct SharedArrayBuffer {
+  pub id: u32,
+}
+
 pub struct HeapBuilder {
   heap_id: usize,
   values: Vec<Option<HeapValue>>,

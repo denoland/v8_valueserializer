@@ -115,8 +115,8 @@ macro_rules! deserialize_test {
         .eval_and_serialize(code.as_str())
         .expect("eval_and_serialize failed");
       println!("{:?}", bytes);
-      let (value, heap) =
-        v8_valueserializer::parse_v8(&bytes).expect("parse_v8 failed");
+      let de = v8_valueserializer::ValueDeserializer::default();
+      let (value, heap) = de.read(&bytes).expect("parse_v8 failed");
       let assert = $crate::util::Assert {
         value,
         heap,

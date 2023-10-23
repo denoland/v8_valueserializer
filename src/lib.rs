@@ -3,7 +3,7 @@ mod display;
 mod tags;
 mod value;
 
-pub use crate::de::parse_v8;
+pub use crate::de::ValueDeserializer;
 pub use crate::display::display;
 pub use crate::value::Heap;
 pub use crate::value::HeapReference;

@@ -1,5 +1,6 @@
 use num_bigint::BigInt;
 use std::alloc::Layout;
+use std::collections::HashMap;
 use std::mem::align_of;
 use std::mem::size_of;
 use std::string::FromUtf8Error;
@@ -93,6 +94,16 @@ pub enum ParseErrorKind {
   UnalignedArrayBufferViewOffset { byte_offset: u32, element_size: u32 },
   #[error("unaligned array buffer view length: byte length: {byte_length}, element size: {element_size}")]
   UnalignedArrayBufferViewLength { byte_length: u32, element_size: u32 },
+  #[error("shared array buffers (and by extension Wasm memory objects) are not supported")]
+  SharedArrayBufferNotSupported,
+  #[error("missing transferred array buffer {}", .0)]
+  MissingTransferredArrayBuffer(u32),
+  #[error("wasm module object transfers are not supported")]
+  WasmModuleTransferNotSupported,
+  #[error("host objects are not supported")]
+  HostObjectNotSupported,
+  #[error("shared objects are not supported")]
+  SharedObjectNotSupported,
 }
 
 struct Input<'a> {
@@ -100,27 +111,39 @@ struct Input<'a> {
   position: usize,
 }
 
-pub fn parse_v8(bytes: &[u8]) -> Result<(Value, Heap), ParseError> {
-  let mut input = Input { bytes, position: 0 };
-  input.expect_tag(SerializationTag::Version)?;
-  let version = input.read_varint()?;
-  if version < MINIMUM_WIRE_FORMAT_VERSION
-    || version > MAXIMUM_WIRE_FORMAT_VERSION
-  {
-    return Err(input.err(ParseErrorKind::InvalidWireFormatVersion(version)));
+#[derive(Default)]
+pub struct ValueDeserializer {
+  transfer_map: HashMap<u32, ArrayBuffer>,
+}
+
+impl ValueDeserializer {
+  pub fn transfer_array_buffer(&mut self, id: u32, ab: ArrayBuffer) {
+    self.transfer_map.insert(id, ab);
   }
-  let mut heap_builder = HeapBuilder::default();
-  let value = read_object(&mut input, &mut heap_builder)?;
-  input.expect_eof()?;
-  let heap = heap_builder.build().map_err(|err| input.err(err.into()))?;
-  Ok((value, heap))
+
+  pub fn read(mut self, bytes: &[u8]) -> Result<(Value, Heap), ParseError> {
+    let mut input = Input { bytes, position: 0 };
+    input.expect_tag(SerializationTag::Version)?;
+    let version = input.read_varint()?;
+    if version < MINIMUM_WIRE_FORMAT_VERSION
+      || version > MAXIMUM_WIRE_FORMAT_VERSION
+    {
+      return Err(input.err(ParseErrorKind::InvalidWireFormatVersion(version)));
+    }
+    let mut heap_builder = HeapBuilder::default();
+    let value = read_object(&mut self, &mut input, &mut heap_builder)?;
+    input.expect_eof()?;
+    let heap = heap_builder.build().map_err(|err| input.err(err.into()))?;
+    Ok((value, heap))
+  }
 }
 
 fn read_object(
+  de: &mut ValueDeserializer,
   input: &mut Input<'_>,
   heap: &mut HeapBuilder,
 ) -> Result<Value, ParseError> {
-  let value = read_object_internal(input, heap)?;
+  let value = read_object_internal(de, input, heap)?;
 
   if let Value::HeapReference(reference) = value {
     match heap.try_open(reference) {
@@ -142,6 +165,7 @@ fn read_object(
 }
 
 fn read_object_internal(
+  de: &mut ValueDeserializer,
   input: &mut Input<'_>,
   heap: &mut HeapBuilder,
 ) -> Result<Value, ParseError> {
@@ -149,7 +173,7 @@ fn read_object_internal(
   if tag == SerializationTag::VerifyObjectCount as u8 {
     // Read the count and ignore it.
     let _ = input.read_varint()?;
-    return read_object(input, heap);
+    return read_object(de, input, heap);
   } else if tag == SerializationTag::Undefined as u8 {
     Ok(Value::Undefined)
   } else if tag == SerializationTag::Null as u8 {
@@ -184,19 +208,19 @@ fn read_object_internal(
     Ok(Value::HeapReference(reference))
   } else if tag == SerializationTag::BeginJsObject as u8 {
     let reference = heap.reserve();
-    let object = read_js_object(input, heap)?;
+    let object = read_js_object(de, input, heap)?;
     let heap_value = HeapValue::Object(object);
     heap.insert_reserved(reference, heap_value);
     Ok(Value::HeapReference(reference))
   } else if tag == SerializationTag::BeginSparseJsArray as u8 {
     let reference = heap.reserve();
-    let array = read_sparse_js_array(input, heap)?;
+    let array = read_sparse_js_array(de, input, heap)?;
     let heap_value = HeapValue::SparseArray(array);
     heap.insert_reserved(reference, heap_value);
     Ok(Value::HeapReference(reference))
   } else if tag == SerializationTag::BeginDenseJsArray as u8 {
     let reference = heap.reserve();
-    let array = read_dense_js_array(input, heap)?;
+    let array = read_dense_js_array(de, input, heap)?;
     let heap_value = HeapValue::DenseArray(array);
     heap.insert_reserved(reference, heap_value);
     Ok(Value::HeapReference(reference))
@@ -235,40 +259,43 @@ fn read_object_internal(
     Ok(Value::HeapReference(reference))
   } else if tag == SerializationTag::BeginJsMap as u8 {
     let reference = heap.reserve();
-    let map = read_js_map(input, heap)?;
+    let map = read_js_map(de, input, heap)?;
     let heap_value = HeapValue::Map(map);
     heap.insert_reserved(reference, heap_value);
     Ok(Value::HeapReference(reference))
   } else if tag == SerializationTag::BeginJsSet as u8 {
     let reference = heap.reserve();
-    let set = read_js_set(input, heap)?;
+    let set = read_js_set(de, input, heap)?;
     let heap_value = HeapValue::Set(set);
     heap.insert_reserved(reference, heap_value);
     Ok(Value::HeapReference(reference))
   } else if tag == SerializationTag::ArrayBuffer as u8 {
-    let array_buffer = read_js_array_buffer(input, false);
-    let heap_value = HeapValue::ArrayBuffer(array_buffer?);
+    let array_buffer = read_js_array_buffer(input, false)?;
+    let heap_value = HeapValue::ArrayBuffer(array_buffer);
     let reference = heap.insert(heap_value);
     Ok(Value::HeapReference(reference))
   } else if tag == SerializationTag::ResizableArrayBuffer as u8 {
-    let array_buffer = read_js_array_buffer(input, true);
-    let heap_value = HeapValue::ArrayBuffer(array_buffer?);
+    let array_buffer = read_js_array_buffer(input, true)?;
+    let heap_value = HeapValue::ArrayBuffer(array_buffer);
     let reference = heap.insert(heap_value);
     Ok(Value::HeapReference(reference))
   } else if tag == SerializationTag::ArrayBufferTransfer as u8 {
-    todo!("ArrayBufferTransfer")
+    let array_buffer = read_transferred_js_array_buffer(de, input)?;
+    let heap_value = HeapValue::ArrayBuffer(array_buffer);
+    let reference = heap.insert(heap_value);
+    Ok(Value::HeapReference(reference))
   } else if tag == SerializationTag::SharedArrayBuffer as u8 {
-    todo!("SharedArrayBuffer")
+    Err(input.err(ParseErrorKind::SharedArrayBufferNotSupported))
   } else if tag == SerializationTag::Error as u8 {
     todo!("Error")
   } else if tag == SerializationTag::WasmModuleTransfer as u8 {
-    todo!("WasmModuleTransfer")
+    Err(input.err(ParseErrorKind::WasmModuleTransferNotSupported))
   } else if tag == SerializationTag::WasmMemoryTransfer as u8 {
-    todo!("WasmMemoryTransfer")
+    Err(input.err(ParseErrorKind::SharedArrayBufferNotSupported))
   } else if tag == SerializationTag::HostObject as u8 {
-    todo!("HostObject")
+    Err(input.err(ParseErrorKind::HostObjectNotSupported))
   } else if tag == SerializationTag::SharedObject as u8 {
-    todo!("SharedObject")
+    Err(input.err(ParseErrorKind::SharedObjectNotSupported))
   } else {
     Err(input.err(ParseErrorKind::UnexpectedTag(tag)))
   }
@@ -359,6 +386,7 @@ fn read_object_reference(
 }
 
 fn read_js_object_properties(
+  de: &mut ValueDeserializer,
   input: &mut Input<'_>,
   heap: &mut HeapBuilder,
   end_tag: SerializationTag,
@@ -368,14 +396,14 @@ fn read_js_object_properties(
     if input.maybe_read_tag(end_tag) {
       break;
     }
-    let key = match read_object(input, heap)? {
+    let key = match read_object(de, input, heap)? {
       Value::I32(int) => PropertyKey::I32(int),
       Value::String(str) => PropertyKey::String(str),
       value => {
         return Err(input.err(ParseErrorKind::InvalidPropertyKey(value)));
       }
     };
-    let value = read_object(input, heap)?;
+    let value = read_object(de, input, heap)?;
     properties.push((key, value));
   }
   let property_count = input.read_varint()?;
@@ -389,21 +417,27 @@ fn read_js_object_properties(
 }
 
 fn read_js_object(
+  de: &mut ValueDeserializer,
   input: &mut Input<'_>,
   heap: &mut HeapBuilder,
 ) -> Result<Object, ParseError> {
   let properties =
-    read_js_object_properties(input, heap, SerializationTag::EndJsObject)?;
+    read_js_object_properties(de, input, heap, SerializationTag::EndJsObject)?;
   Ok(Object { properties })
 }
 
 fn read_sparse_js_array(
+  de: &mut ValueDeserializer,
   input: &mut Input<'_>,
   heap: &mut HeapBuilder,
 ) -> Result<SparseArray, ParseError> {
   let length = input.read_varint()?;
-  let properties =
-    read_js_object_properties(input, heap, SerializationTag::EndSparseJsArray)?;
+  let properties = read_js_object_properties(
+    de,
+    input,
+    heap,
+    SerializationTag::EndSparseJsArray,
+  )?;
   let expected_length = input.read_varint()?;
   if expected_length != length {
     return Err(input.err(ParseErrorKind::InvalidArrayElementsLength {
@@ -415,6 +449,7 @@ fn read_sparse_js_array(
 }
 
 fn read_dense_js_array(
+  de: &mut ValueDeserializer,
   input: &mut Input<'_>,
   heap: &mut HeapBuilder,
 ) -> Result<DenseArray, ParseError> {
@@ -425,12 +460,16 @@ fn read_dense_js_array(
     if input.maybe_read_tag(SerializationTag::TheHole) {
       elements.push(None);
     } else {
-      let value = read_object(input, heap)?;
+      let value = read_object(de, input, heap)?;
       elements.push(Some(value));
     }
   }
-  let properties =
-    read_js_object_properties(input, heap, SerializationTag::EndDenseJsArray)?;
+  let properties = read_js_object_properties(
+    de,
+    input,
+    heap,
+    SerializationTag::EndDenseJsArray,
+  )?;
   let final_elements_length = input.read_varint()?;
   if final_elements_length != length {
     return Err(input.err(ParseErrorKind::InvalidArrayElementsLength {
@@ -458,6 +497,7 @@ fn read_regexp(input: &mut Input<'_>) -> Result<RegExp, ParseError> {
 }
 
 fn read_js_map(
+  de: &mut ValueDeserializer,
   input: &mut Input<'_>,
   heap: &mut HeapBuilder,
 ) -> Result<Map, ParseError> {
@@ -467,8 +507,8 @@ fn read_js_map(
     if input.maybe_read_tag(SerializationTag::EndJsMap) {
       break;
     }
-    let key = read_object(input, heap)?;
-    let value = read_object(input, heap)?;
+    let key = read_object(de, input, heap)?;
+    let value = read_object(de, input, heap)?;
     entries.push((key, value));
   }
 
@@ -485,6 +525,7 @@ fn read_js_map(
 }
 
 fn read_js_set(
+  de: &mut ValueDeserializer,
   input: &mut Input<'_>,
   heap: &mut HeapBuilder,
 ) -> Result<Set, ParseError> {
@@ -494,7 +535,7 @@ fn read_js_set(
     if input.maybe_read_tag(SerializationTag::EndJsSet) {
       break;
     }
-    let value = read_object(input, heap)?;
+    let value = read_object(de, input, heap)?;
     values.push(value);
   }
 
@@ -642,6 +683,17 @@ fn alloc_aligned_u8_slice(size: usize) -> Box<[u8]> {
   debug_assert_eq!(type_vec.as_ptr() as usize % align_of::<u64>(), 0);
   debug_assert_eq!(type_vec.as_ptr() as usize, ptr as usize);
   type_vec.into_boxed_slice()
+}
+
+fn read_transferred_js_array_buffer(
+  de: &mut ValueDeserializer,
+  input: &mut Input<'_>,
+) -> Result<ArrayBuffer, ParseError> {
+  let id = input.read_varint()?;
+  let Some(ab) = de.transfer_map.remove(&id) else {
+    return Err(input.err(ParseErrorKind::MissingTransferredArrayBuffer(id)))
+  };
+  Ok(ab)
 }
 
 impl<'a> Input<'a> {
