@@ -1,0 +1,13 @@
+[package]
+name = "v8_valueserializer_wasm"
+version = "0.0.0"
+edition = "2021"
+
+[lib]
+path = "lib.rs"
+crate_type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "=0.2.87"
+v8_valueserializer = { path = "../" }
+getrandom = { version = "*", features = ["js"] }

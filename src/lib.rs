@@ -7,6 +7,8 @@ pub use crate::de::ParseError;
 pub use crate::de::ParseErrorKind;
 pub use crate::de::ValueDeserializer;
 pub use crate::display::display;
+pub use crate::display::DisplayFormat;
+pub use crate::display::DisplayOptions;
 pub use crate::value::Heap;
 pub use crate::value::HeapReference;
 pub use crate::value::HeapValue;

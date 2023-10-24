@@ -77,7 +77,12 @@ impl HeapObjectInfo {
 }
 
 impl<'h, W: Write> Displayer<'h, W> {
-  fn display(heap: &'h Heap, value: &Value, writer: W) -> std::fmt::Result {
+  fn display(
+    heap: &'h Heap,
+    value: &Value,
+    opts: DisplayOptions,
+    writer: W,
+  ) -> std::fmt::Result {
     let mut deps = DependencyInfo::default();
 
     macro_rules! visit_and_record {
@@ -191,7 +196,7 @@ impl<'h, W: Write> Displayer<'h, W> {
       info.dependants_count += 1; // the root object has one dependant that isn't in the stack (the displayer)
     }
 
-    println!("{:#?}", deps);
+    let multiline = deps.objects.values().any(|info| !info.inlineable());
 
     let mut this = Self {
       heap,
@@ -201,79 +206,115 @@ impl<'h, W: Write> Displayer<'h, W> {
       idents: HashMap::new(),
       follow_up_tasks: Vec::new(),
     };
-    let Value::HeapReference(reference) = value else {
-      return this.display_value(value);
+
+    match opts.format {
+      DisplayFormat::Expression if multiline => {
+        writeln!(this.writer, "(function() {{ ")?
+      }
+      DisplayFormat::Expression | DisplayFormat::Repl | DisplayFormat::Eval => {
+      }
+    }
+
+    if let Value::HeapReference(reference) = value {
+      assert_eq!(deps.order.last(), Some(reference));
+
+      for (i, reference) in deps.order.iter().enumerate() {
+        let info = this.deps.get(reference).unwrap();
+        if !info.inlineable() {
+          // we need to assign this object to a variable because it is referenced
+          // by multiple objects
+          let ident = format!("v{}", i);
+          write!(this.writer, "const {} = ", ident)?;
+          this.display_heap_value(reference.open(this.heap), reference)?;
+          writeln!(this.writer, ";")?;
+          this.idents.insert(*reference, ident.clone());
+
+          // Run the follow up tasks for this object.
+          let follow_up_tasks_to_run =
+            std::mem::take(&mut this.follow_up_tasks);
+          for task in follow_up_tasks_to_run {
+            match &task {
+              FollowUpTasks::PropertyAssignment { target, key, value } => {
+                let Some(ident) = this.idents.get(&target) else {
+                  this.follow_up_tasks.push(task);
+                  continue;
+                };
+                if !this.is_ready_to_render(value) {
+                  this.follow_up_tasks.push(task);
+                  continue;
+                }
+                write!(this.writer, "{}[", ident)?;
+                this.display_property_key(&key)?;
+                write!(this.writer, "] = ")?;
+                this.display_value(&value)?;
+                writeln!(this.writer, ";")?;
+              }
+              FollowUpTasks::MapSet { target, key, value } => {
+                let Some(ident) = this.idents.get(&target) else {
+                  this.follow_up_tasks.push(task);
+                  continue;
+                };
+                if !this.is_ready_to_render(&key)
+                  || !this.is_ready_to_render(&value)
+                {
+                  this.follow_up_tasks.push(task);
+                  continue;
+                }
+                write!(this.writer, "{}.set(", ident)?;
+                this.display_value(&key)?;
+                write!(this.writer, ", ")?;
+                this.display_value(&value)?;
+                writeln!(this.writer, ");")?;
+              }
+              FollowUpTasks::SetAdd { target, value } => {
+                let Some(ident) = this.idents.get(&target) else {
+                  this.follow_up_tasks.push(task);
+                  continue;
+                };
+                if !this.is_ready_to_render(&value) {
+                  this.follow_up_tasks.push(task);
+                  continue;
+                }
+                write!(this.writer, "{}.add(", ident)?;
+                this.display_value(&value)?;
+                writeln!(this.writer, ");")?;
+              }
+            }
+          }
+        }
+      }
+      assert!(this.follow_up_tasks.is_empty());
     };
-    assert_eq!(deps.order.last(), Some(reference));
 
-    for (i, reference) in deps.order.iter().enumerate() {
-      let info = this.deps.get(reference).unwrap();
-      if !info.inlineable() {
-        // we need to assign this object to a variable because it is referenced
-        // by multiple objects
-        let ident = format!("v{}", i);
-        write!(this.writer, "const {} = ", ident)?;
-        this.display_heap_value(reference.open(this.heap), reference)?;
-        writeln!(this.writer, ";")?;
-        this.idents.insert(*reference, ident.clone());
-
-        // Run the follow up tasks for this object.
-        let follow_up_tasks_to_run = std::mem::take(&mut this.follow_up_tasks);
-        for task in follow_up_tasks_to_run {
-          match &task {
-            FollowUpTasks::PropertyAssignment { target, key, value } => {
-              let Some(ident) = this.idents.get(&target) else {
-                this.follow_up_tasks.push(task);
-                continue;
-              };
-              if !this.is_ready_to_render(value) {
-                this.follow_up_tasks.push(task);
-                continue;
-              }
-              write!(this.writer, "{}[", ident)?;
-              this.display_property_key(&key)?;
-              write!(this.writer, "] = ")?;
-              this.display_value(&value)?;
-              writeln!(this.writer, ";")?;
-            }
-            FollowUpTasks::MapSet { target, key, value } => {
-              let Some(ident) = this.idents.get(&target) else {
-                this.follow_up_tasks.push(task);
-                continue;
-              };
-              if !this.is_ready_to_render(&key)
-                || !this.is_ready_to_render(&value)
-              {
-                this.follow_up_tasks.push(task);
-                continue;
-              }
-              write!(this.writer, "{}.set(", ident)?;
-              this.display_value(&key)?;
-              write!(this.writer, ", ")?;
-              this.display_value(&value)?;
-              writeln!(this.writer, ");")?;
-            }
-            FollowUpTasks::SetAdd { target, value } => {
-              let Some(ident) = this.idents.get(&target) else {
-                this.follow_up_tasks.push(task);
-                continue;
-              };
-              if !this.is_ready_to_render(&value) {
-                this.follow_up_tasks.push(task);
-                continue;
-              }
-              write!(this.writer, "{}.add(", ident)?;
-              this.display_value(&value)?;
-              writeln!(this.writer, ");")?;
+    let mut return_has_parens = false;
+    match opts.format {
+      DisplayFormat::Expression if multiline => write!(this.writer, "return ")?,
+      DisplayFormat::Expression | DisplayFormat::Repl | DisplayFormat::Eval => {
+        if let Value::HeapReference(reference) = value {
+          let info = this.deps.get(reference).unwrap();
+          if info.inlineable() {
+            let value = reference.open(this.heap);
+            if matches!(value, HeapValue::Object(..)) {
+              return_has_parens = true;
+              write!(this.writer, "(")?;
             }
           }
         }
       }
     }
 
-    assert!(this.follow_up_tasks.is_empty());
+    this.display_value(value)?;
 
-    this.display_value(value)
+    match opts.format {
+      DisplayFormat::Expression if multiline => write!(this.writer, "\n)()")?,
+      DisplayFormat::Expression | DisplayFormat::Repl | DisplayFormat::Eval => {
+        if return_has_parens {
+          write!(this.writer, ")")?;
+        }
+      }
+    }
+
+    Ok(())
   }
 
   fn is_ready_to_render(&self, value: &Value) -> bool {
@@ -542,8 +583,30 @@ impl<'h, W: Write> Displayer<'h, W> {
   }
 }
 
-pub fn display(heap: &Heap, value: &Value) -> String {
+pub fn display(heap: &Heap, value: &Value, opts: DisplayOptions) -> String {
   let mut result = String::new();
-  Displayer::display(&heap, &value, &mut result).unwrap();
+  Displayer::display(&heap, &value, opts, &mut result).unwrap();
   result
+}
+
+pub enum DisplayFormat {
+  /// Display the value as a string that can be passed to a JavaScript REPL. In
+  /// this mode, the final statement of the string is not terminated with a
+  /// semicolon and may be wrapped in parentheses to make it an expression
+  /// statement.
+  ///
+  /// This is usually the clearest way to display a value to a user.
+  Repl,
+  /// Display the value as a string that can be used in an expression position,
+  /// such as the RHS of a function. If intermediate variables are needed, the
+  /// entire string is wrapped in an IIFE.
+  Expression,
+  /// Display the value as a string that can be passed to eval(). One should use
+  /// indirect eval (for example `(0, eval)()`) to avoid polluting the current
+  /// scope.
+  Eval,
+}
+
+pub struct DisplayOptions {
+  pub format: DisplayFormat,
 }
