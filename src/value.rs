@@ -429,7 +429,7 @@ fn double_to_integer(x: f64) -> f64 {
 impl Date {
   pub fn new(time_since_epoch: f64) -> Date {
     const MAX_TIME_IN_MS: f64 = (864_000_000i64 * 10_000_000i64) as f64;
-    if time_since_epoch < -MAX_TIME_IN_MS || time_since_epoch > MAX_TIME_IN_MS {
+    if time_since_epoch >= -MAX_TIME_IN_MS && time_since_epoch <= MAX_TIME_IN_MS {
       let time_since_epoch = double_to_integer(time_since_epoch);
       Date { time_since_epoch }
     } else {
