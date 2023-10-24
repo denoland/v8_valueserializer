@@ -431,6 +431,7 @@ fn read_js_object_properties(
     let key = match read_object(de, input, heap)? {
       Value::I32(int) => PropertyKey::I32(int),
       Value::U32(uint) => PropertyKey::U32(uint),
+      Value::Double(double) => PropertyKey::Double(double),
       Value::String(str) => PropertyKey::String(str),
       value => {
         return Err(input.err(ParseErrorKind::InvalidPropertyKey(value)));
@@ -627,7 +628,7 @@ fn read_js_array_buffer_view(
   buffer_byte_length: u32,
   buffer: HeapReference,
 ) -> Result<ArrayBufferView, ParseError> {
-  let tag = input.read_byte()?;
+  let tag = input.read_varint_u8()?;
   let byte_offset = input.read_varint()?;
   let byte_length = input.read_varint()?;
   let flags = input.read_varint()?;

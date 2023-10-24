@@ -317,6 +317,7 @@ impl std::fmt::Debug for HeapValue {
 pub enum PropertyKey {
   I32(i32),
   U32(u32),
+  Double(f64),
   String(StringValue),
 }
 
@@ -325,6 +326,7 @@ impl std::fmt::Debug for PropertyKey {
     match self {
       Self::I32(index) => std::fmt::Debug::fmt(index, f),
       Self::U32(index) => std::fmt::Debug::fmt(index, f),
+      Self::Double(key) => std::fmt::Debug::fmt(key, f),
       Self::String(key) => std::fmt::Debug::fmt(key, f),
     }
   }

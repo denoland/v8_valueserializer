@@ -533,6 +533,11 @@ impl<'h, W: Write> Displayer<'h, W> {
       crate::value::PropertyKey::String(string) => self.display_string(string),
       crate::value::PropertyKey::I32(num) => write!(self.writer, "[{}]", num),
       crate::value::PropertyKey::U32(num) => write!(self.writer, "[{}]", num),
+      crate::value::PropertyKey::Double(num) => {
+        write!(self.writer, "[")?;
+        self.display_number(*num)?;
+        write!(self.writer, "]")
+      }
     }
   }
 }

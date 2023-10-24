@@ -5,9 +5,18 @@ mod util;
 
 fn main() {
   let path = std::env::args().nth(1).unwrap();
-  let mut crash_paths = std::fs::read_dir(path)
+  let fuzzer_paths = std::fs::read_dir(path)
     .unwrap()
     .map(|x| x.unwrap().path())
+    .collect::<Vec<_>>();
+  let mut crash_paths = fuzzer_paths
+    .into_iter()
+    .flat_map(|path| {
+      std::fs::read_dir(path.join("crashes"))
+        .unwrap()
+        .map(|x| x.unwrap().path())
+        .filter(|path| !path.ends_with("README.txt"))
+    })
     .collect::<Vec<_>>();
   crash_paths.sort();
   for crash_path in crash_paths {
