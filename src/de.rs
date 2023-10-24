@@ -152,7 +152,7 @@ fn read_object(
   heap: &mut HeapBuilder,
 ) -> Result<Value, ParseError> {
   if de.recursion_depth > RECURSION_DEPTH_LIMIT {
-    return Err(input.err(ParseErrorKind::ExpectedEof));
+    return Err(input.err(ParseErrorKind::TooDeeplyNested));
   }
   de.recursion_depth += 1;
   let res = read_object_internal(de, input, heap);
@@ -382,7 +382,7 @@ fn read_string_value(
   input: &mut Input<'_>,
 ) -> Result<StringValue, ParseError> {
   if de.recursion_depth > RECURSION_DEPTH_LIMIT {
-    return Err(input.err(ParseErrorKind::ExpectedEof));
+    return Err(input.err(ParseErrorKind::TooDeeplyNested));
   }
   input.skip_padding();
   let tag = input.read_byte()?;

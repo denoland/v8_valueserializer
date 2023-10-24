@@ -25,7 +25,8 @@ fn main() {
           | ParseErrorKind::HostObjectNotSupported
           | ParseErrorKind::SharedObjectNotSupported
           | ParseErrorKind::SharedArrayBufferNotSupported
-          | ParseErrorKind::WasmModuleTransferNotSupported,
+          | ParseErrorKind::WasmModuleTransferNotSupported
+          | ParseErrorKind::TooDeeplyNested,
         ..
       }) => {
         println!("ok");
