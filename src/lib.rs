@@ -3,6 +3,8 @@ mod display;
 mod tags;
 mod value;
 
+pub use crate::de::ParseError;
+pub use crate::de::ParseErrorKind;
 pub use crate::de::ValueDeserializer;
 pub use crate::display::display;
 pub use crate::value::Heap;

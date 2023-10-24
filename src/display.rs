@@ -310,7 +310,9 @@ impl<'h, W: Write> Displayer<'h, W> {
 
   fn display_string(&mut self, string: &StringValue) -> std::fmt::Result {
     match string {
-      StringValue::Utf8(string) => self.display_string_literal(string.chars()),
+      StringValue::Wtf8(string) => {
+        self.display_string_literal(string.as_str().chars())
+      }
       StringValue::OneByte(string) => {
         self.display_string_literal(string.as_str().chars())
       }
@@ -530,6 +532,7 @@ impl<'h, W: Write> Displayer<'h, W> {
     match key {
       crate::value::PropertyKey::String(string) => self.display_string(string),
       crate::value::PropertyKey::I32(num) => write!(self.writer, "[{}]", num),
+      crate::value::PropertyKey::U32(num) => write!(self.writer, "[{}]", num),
     }
   }
 }

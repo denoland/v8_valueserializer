@@ -3,7 +3,6 @@ use std::alloc::Layout;
 use std::collections::HashMap;
 use std::mem::align_of;
 use std::mem::size_of;
-use std::string::FromUtf8Error;
 use thiserror::Error;
 
 use crate::tags::ArrayBufferViewTag;
@@ -27,6 +26,7 @@ use crate::value::RegExp;
 use crate::value::Set;
 use crate::value::SparseArray;
 use crate::value::Value;
+use crate::value::Wtf8String;
 use crate::HeapReference;
 use crate::StringValue;
 use crate::TwoByteString;
@@ -38,13 +38,15 @@ const MAXIMUM_WIRE_FORMAT_VERSION: u32 = 15;
 #[error("parse error at position {position}: {kind}")]
 pub struct ParseError {
   position: usize,
-  kind: ParseErrorKind,
+  pub kind: ParseErrorKind,
 }
 
 #[derive(Debug, Error)]
 pub enum ParseErrorKind {
   #[error("unexpected end of file")]
   UnexpectedEof,
+  #[error("expected at least {0} more bytes, but only {1} bytes are left")]
+  ExpectedMinimumBytes(usize, usize),
   #[error("expected tag {0:?} but got {1:?}")]
   ExpectedTag(SerializationTag, u8),
   #[error("invalid wire format version")]
@@ -53,16 +55,10 @@ pub enum ParseErrorKind {
   UnexpectedTag(u8),
   #[error("unexpected error tag {0:?}")]
   UnexpectedErrorTag(u8),
-  #[error("invalid utf8 string: {0}")]
-  InvalidUtf8String(FromUtf8Error),
   #[error("invalid one byte string")]
-  InvalidOneByteString,
-  #[error("invalid length two byte string")]
   InvalidLengthTwoByteString,
   #[error("invalid object reference {0}")]
   InvalidObjectReference(u32),
-  #[error("invalid date")]
-  InvalidDate,
   #[error(
     "invalid array elements length: expected {expected}, actual {actual}"
   )]
@@ -109,6 +105,8 @@ pub enum ParseErrorKind {
   HostObjectNotSupported,
   #[error("shared objects are not supported")]
   SharedObjectNotSupported,
+  #[error("an object is too deeply nested, hit recursion depth limit")]
+  TooDeeplyNested,
 }
 
 struct Input<'a> {
@@ -119,6 +117,7 @@ struct Input<'a> {
 #[derive(Default)]
 pub struct ValueDeserializer {
   transfer_map: HashMap<u32, ArrayBuffer>,
+  recursion_depth: usize,
 }
 
 impl ValueDeserializer {
@@ -138,17 +137,27 @@ impl ValueDeserializer {
     let mut heap_builder = HeapBuilder::default();
     let value = read_object(&mut self, &mut input, &mut heap_builder)?;
     input.expect_eof()?;
-    let heap = heap_builder.build().map_err(|err| input.err(err.into()))?;
+    let heap = heap_builder
+      .build()
+      .map_err(|err| input.err_current(err.into()))?;
     Ok((value, heap))
   }
 }
+
+const RECURSION_DEPTH_LIMIT: usize = 256;
 
 fn read_object(
   de: &mut ValueDeserializer,
   input: &mut Input<'_>,
   heap: &mut HeapBuilder,
 ) -> Result<Value, ParseError> {
-  let value = read_object_internal(de, input, heap)?;
+  if de.recursion_depth > RECURSION_DEPTH_LIMIT {
+    return Err(input.err(ParseErrorKind::ExpectedEof));
+  }
+  de.recursion_depth += 1;
+  let res = read_object_internal(de, input, heap);
+  de.recursion_depth -= 1;
+  let value = res?;
 
   if let Value::HeapReference(reference) = value {
     match heap.try_open(reference) {
@@ -174,6 +183,7 @@ fn read_object_internal(
   input: &mut Input<'_>,
   heap: &mut HeapBuilder,
 ) -> Result<Value, ParseError> {
+  input.skip_padding();
   let tag = input.read_byte()?;
   if tag == SerializationTag::VerifyObjectCount as u8 {
     // Read the count and ignore it.
@@ -201,7 +211,7 @@ fn read_object_internal(
     Ok(Value::BigInt(value))
   } else if tag == SerializationTag::Utf8String as u8 {
     let value = read_utf8_string(input)?;
-    Ok(Value::String(StringValue::Utf8(value)))
+    Ok(Value::String(StringValue::Wtf8(value)))
   } else if tag == SerializationTag::OneByteString as u8 {
     let value = read_one_byte_string(input)?;
     Ok(Value::String(StringValue::OneByte(value)))
@@ -253,12 +263,12 @@ fn read_object_internal(
     let reference = heap.insert(heap_value);
     Ok(Value::HeapReference(reference))
   } else if tag == SerializationTag::StringObject as u8 {
-    let value = read_string(input)?;
+    let value = read_string_value(de, input)?;
     let heap_value = HeapValue::StringObject(value);
     let reference = heap.insert(heap_value);
     Ok(Value::HeapReference(reference))
   } else if tag == SerializationTag::RegExp as u8 {
-    let regexp = read_regexp(input)?;
+    let regexp = read_regexp(de, input)?;
     let heap_value = HeapValue::RegExp(regexp);
     let reference = heap.insert(heap_value);
     Ok(Value::HeapReference(reference))
@@ -327,11 +337,10 @@ fn read_bigint(input: &mut Input<'_>) -> Result<BigInt, ParseError> {
   Ok(BigInt::from_bytes_le(sign, bytes))
 }
 
-fn read_utf8_string(input: &mut Input<'_>) -> Result<String, ParseError> {
+fn read_utf8_string(input: &mut Input<'_>) -> Result<Wtf8String, ParseError> {
   let byte_length = input.read_varint()?;
   let bytes = input.read_bytes(byte_length as usize)?;
-  let string = String::from_utf8(bytes.to_vec())
-    .map_err(|err| input.err(ParseErrorKind::InvalidUtf8String(err)))?;
+  let string = Wtf8String::new(bytes.to_vec());
   Ok(string)
 }
 
@@ -340,8 +349,7 @@ fn read_one_byte_string(
 ) -> Result<OneByteString, ParseError> {
   let byte_length = input.read_varint()?;
   let bytes = input.read_bytes(byte_length as usize)?;
-  let string = OneByteString::new(bytes.to_vec())
-    .map_err(|_| input.err(ParseErrorKind::InvalidOneByteString))?;
+  let string = OneByteString::new(bytes.to_vec());
   Ok(string)
 }
 
@@ -353,6 +361,8 @@ fn read_two_byte_string(
     return Err(input.err(ParseErrorKind::InvalidLengthTwoByteString));
   }
   let bytes = input.read_bytes(byte_length as usize)?;
+  // This allocation is not unbounded, because it will only occur if the input
+  // contained at least byte_length bytes.
   let mut chars = vec![0u16; byte_length as usize / 2];
   // Safety: we checked that bytes is a multiple of 2, and chars has the same
   // length as bytes divided by 2. Therefore, the length of bytes and chars is
@@ -367,12 +377,25 @@ fn read_two_byte_string(
   Ok(TwoByteString::new(chars))
 }
 
-fn read_string(input: &mut Input<'_>) -> Result<StringValue, ParseError> {
+fn read_string_value(
+  de: &mut ValueDeserializer,
+  input: &mut Input<'_>,
+) -> Result<StringValue, ParseError> {
+  if de.recursion_depth > RECURSION_DEPTH_LIMIT {
+    return Err(input.err(ParseErrorKind::ExpectedEof));
+  }
   input.skip_padding();
   let tag = input.read_byte()?;
-  if tag == SerializationTag::Utf8String as u8 {
+  if tag == SerializationTag::VerifyObjectCount as u8 {
+    // Read the count and ignore it.
+    let _ = input.read_varint()?;
+    de.recursion_depth += 1;
+    let res = read_string_value(de, input);
+    de.recursion_depth -= 1;
+    res
+  } else if tag == SerializationTag::Utf8String as u8 {
     let value = read_utf8_string(input)?;
-    Ok(StringValue::Utf8(value))
+    Ok(StringValue::Wtf8(value))
   } else if tag == SerializationTag::OneByteString as u8 {
     let value = read_one_byte_string(input)?;
     Ok(StringValue::OneByte(value))
@@ -407,6 +430,7 @@ fn read_js_object_properties(
     }
     let key = match read_object(de, input, heap)? {
       Value::I32(int) => PropertyKey::I32(int),
+      Value::U32(uint) => PropertyKey::U32(uint),
       Value::String(str) => PropertyKey::String(str),
       value => {
         return Err(input.err(ParseErrorKind::InvalidPropertyKey(value)));
@@ -463,7 +487,9 @@ fn read_dense_js_array(
   heap: &mut HeapBuilder,
 ) -> Result<DenseArray, ParseError> {
   let length = input.read_varint()?;
-  // todo: consider validating length more strictly
+  input.ensure_minimum_available(length as usize)?;
+  // This allocation is not unbounded, because it will only occur if the input
+  // contained at least length bytes. This is checked by the function above.
   let mut elements = Vec::with_capacity(length as usize);
   for _ in 0..length {
     if input.maybe_read_tag(SerializationTag::TheHole) {
@@ -494,12 +520,14 @@ fn read_dense_js_array(
 
 fn read_date(input: &mut Input<'_>) -> Result<Date, ParseError> {
   let time_since_epoch = input.read_double()?;
-  Date::new(time_since_epoch)
-    .map_err(|_| input.err(ParseErrorKind::InvalidDate))
+  Ok(Date::new(time_since_epoch))
 }
 
-fn read_regexp(input: &mut Input<'_>) -> Result<RegExp, ParseError> {
-  let pattern = read_string(input)?;
+fn read_regexp(
+  de: &mut ValueDeserializer,
+  input: &mut Input<'_>,
+) -> Result<RegExp, ParseError> {
+  let pattern = read_string_value(de, input)?;
   let flags = input.read_varint()?;
   // todo: validate flags
   Ok(RegExp { pattern, flags })
@@ -578,6 +606,8 @@ fn read_js_array_buffer(
     max_byte_length = Some(max_byte_length_value);
   }
   let bytes = input.read_bytes(byte_length as usize)?;
+  // This allocation is not unbounded, because it will only occur if the input
+  // contained at least byte_length bytes.
   let mut data = alloc_aligned_u8_slice(byte_length as usize);
   unsafe {
     std::ptr::copy_nonoverlapping(
@@ -700,7 +730,7 @@ fn read_transferred_js_array_buffer(
 ) -> Result<ArrayBuffer, ParseError> {
   let id = input.read_varint()?;
   let Some(ab) = de.transfer_map.remove(&id) else {
-    return Err(input.err(ParseErrorKind::MissingTransferredArrayBuffer(id)))
+    return Err(input.err(ParseErrorKind::MissingTransferredArrayBuffer(id)));
   };
   Ok(ab)
 }
@@ -715,7 +745,7 @@ fn read_js_error(
   let mut cause = None;
   let mut stack = None;
   loop {
-    let tag = input.read_byte()?;
+    let tag = input.read_varint_u8()?;
     if tag == ErrorTag::EvalErrorPrototype as u8 {
       kind = ErrorKind::EvalError;
     } else if tag == ErrorTag::RangeErrorPrototype as u8 {
@@ -729,10 +759,10 @@ fn read_js_error(
     } else if tag == ErrorTag::UriErrorPrototype as u8 {
       kind = ErrorKind::UriError;
     } else if tag == ErrorTag::Message as u8 {
-      let str = read_string(input)?;
+      let str = read_string_value(de, input)?;
       message = Some(str);
     } else if tag == ErrorTag::Stack as u8 {
-      let str = read_string(input)?;
+      let str = read_string_value(de, input)?;
       stack = Some(str);
     } else if tag == ErrorTag::Cause as u8 {
       let obj = read_object(de, input, heap)?;
@@ -753,16 +783,36 @@ fn read_js_error(
 }
 
 impl<'a> Input<'a> {
-  fn err(&self, kind: ParseErrorKind) -> ParseError {
+  /// Creates a new ParseError at the position that is currently being read.
+  fn err_current(&self, kind: ParseErrorKind) -> ParseError {
     ParseError {
       position: self.position,
       kind,
     }
   }
 
+  /// Creates a new ParseError at the position most recently read from.
+  fn err(&self, kind: ParseErrorKind) -> ParseError {
+    ParseError {
+      position: self.position - 1,
+      kind,
+    }
+  }
+
   fn expect_eof(&self) -> Result<(), ParseError> {
     if self.bytes.len() < self.position {
-      return Err(self.err(ParseErrorKind::ExpectedEof));
+      return Err(self.err_current(ParseErrorKind::ExpectedEof));
+    }
+    Ok(())
+  }
+
+  fn ensure_minimum_available(&self, bytes: usize) -> Result<(), ParseError> {
+    let available = self.bytes.len() - self.position;
+    if available < bytes {
+      return Err(
+        self
+          .err_current(ParseErrorKind::ExpectedMinimumBytes(bytes, available)),
+      );
     }
     Ok(())
   }
@@ -779,7 +829,7 @@ impl<'a> Input<'a> {
     let val = self
       .bytes
       .get(self.position)
-      .ok_or_else(|| self.err(ParseErrorKind::UnexpectedEof))?;
+      .ok_or_else(|| self.err_current(ParseErrorKind::UnexpectedEof))?;
     self.position += 1;
     Ok(*val)
   }
@@ -788,7 +838,7 @@ impl<'a> Input<'a> {
     let val = self
       .bytes
       .get(self.position..self.position + len)
-      .ok_or_else(|| self.err(ParseErrorKind::UnexpectedEof))?;
+      .ok_or_else(|| self.err_current(ParseErrorKind::UnexpectedEof))?;
     self.position += len;
     Ok(val)
   }
@@ -830,6 +880,20 @@ impl<'a> Input<'a> {
       value |= ((byte & 0b01111111) as u32) << (i * 7);
       i += 1;
       if byte & 0b10000000 == 0 || i >= size_of::<u32>() + 1 {
+        break;
+      }
+    }
+    Ok(value)
+  }
+
+  fn read_varint_u8(&mut self) -> Result<u8, ParseError> {
+    let mut value = 0u8;
+    let mut i = 0;
+    loop {
+      let byte = self.read_byte()?;
+      value |= ((byte & 0b01111111) as u8) << (i * 7);
+      i += 1;
+      if byte & 0b10000000 == 0 || i >= size_of::<u8>() + 1 {
         break;
       }
     }

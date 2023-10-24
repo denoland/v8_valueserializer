@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::fmt::Debug;
-use std::string::FromUtf16Error;
 
 use num_bigint::BigInt;
 use rand::Rng;
@@ -21,7 +20,7 @@ pub enum Value {
 
 #[derive(Clone)]
 pub enum StringValue {
-  Utf8(String),
+  Wtf8(Wtf8String),
   OneByte(OneByteString),
   TwoByte(TwoByteString),
 }
@@ -29,9 +28,9 @@ pub enum StringValue {
 impl std::fmt::Debug for StringValue {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::Utf8(s) => {
-        write!(f, "Utf8(\"")?;
-        write!(f, "{}", s.escape_default())?;
+      Self::Wtf8(s) => {
+        write!(f, "Wtf8(\"")?;
+        write!(f, "{}", s.as_str().escape_default())?;
         write!(f, "\")")
       }
       Self::OneByte(s) => {
@@ -53,78 +52,139 @@ impl StringValue {
   /// will be stored as a OneByte string, otherwise it will be stored as a Utf8
   /// string.
   pub fn new(s: String) -> Self {
-    match OneByteString::new(s.into_bytes()) {
-      Ok(str) => Self::OneByte(str),
-      Err(bytes) => {
-        // SAFETY: The bytes are valid UTF-8, because they came out of a String.
-        let str = unsafe { String::from_utf8_unchecked(bytes) };
-        Self::Utf8(str)
-      }
+    if s.is_ascii() {
+      Self::OneByte(OneByteString {
+        bytes: s.into_bytes(),
+        is_ascii: true, // We just checked that the string is ASCII.
+      })
+    } else {
+      Self::Wtf8(Wtf8String {
+        bytes: s.into_bytes(),
+        is_utf8: true, // This string is valid UTF-8, because it was a String.
+      })
     }
   }
 
-  /// Get the value of the string as a String. If the string is stored as a
-  /// two byte (WTF-16) string, it will be converted to a String using the
-  /// `String::from_utf16` method, and if the string is then not valid UTF-16,
-  /// this method will return an error.
-  pub fn into_string(self) -> Result<String, FromUtf16Error> {
+  /// Turn the StringValue into a String.
+  pub fn into_string(self) -> String {
     match self {
-      Self::Utf8(s) => Ok(s),
-      Self::OneByte(s) => Ok(s.into_string()),
+      Self::Wtf8(s) => s.into_string(),
+      Self::OneByte(s) => s.into_string(),
       Self::TwoByte(chars) => chars.to_string(),
     }
   }
 
-  /// Get the value of the string as a String. If the string is stored as a
-  /// two byte (WTF-16) string, it will be converted to a String using the
-  /// `String::from_utf16` method, and if the string is then not valid UTF-16,
-  /// this method will return an error.
-  pub fn to_string(&self) -> Result<Cow<'_, str>, FromUtf16Error> {
+  /// Get the value of the string as a String.
+  pub fn to_string(&self) -> Cow<'_, str> {
     match &self {
-      Self::Utf8(s) => Ok(Cow::Borrowed(s)),
-      Self::OneByte(s) => Ok(Cow::Borrowed(s.as_str())),
-      Self::TwoByte(chars) => chars.to_string().map(Cow::Owned),
-    }
-  }
-
-  /// The same as `to_string`, but if the string is stored as a two byte
-  /// (WTF-16) string, it will be converted to a String using the
-  /// `String::from_utf16_lossy` method.
-  pub fn to_string_lossy(&self) -> Cow<'_, str> {
-    match &self {
-      Self::Utf8(s) => Cow::Borrowed(s),
-      Self::OneByte(s) => Cow::Borrowed(s.as_str()),
-      Self::TwoByte(chars) => Cow::Owned(chars.to_string_lossy()),
+      Self::Wtf8(s) => s.as_str(),
+      Self::OneByte(s) => s.as_str(),
+      Self::TwoByte(chars) => Cow::Owned(chars.to_string()),
     }
   }
 }
 
 #[derive(Debug, Clone)]
-pub struct OneByteString(Vec<u8>);
+pub struct Wtf8String {
+  bytes: Vec<u8>,
+  is_utf8: bool,
+}
 
-impl OneByteString {
-  /// Create a new OneByteString from a Vec<u8>. If the bytes are valid ASCII,
-  /// this will succeed, otherwise it will return an error.
-  pub fn new(bytes: Vec<u8>) -> Result<Self, Vec<u8>> {
-    if bytes.is_ascii() {
-      Ok(Self(bytes))
+impl Wtf8String {
+  /// Create a new Wtf8String from a Vec<u8>.
+  pub fn new(bytes: Vec<u8>) -> Self {
+    let is_utf8 = std::str::from_utf8(&bytes).is_ok();
+    Self { bytes, is_utf8 }
+  }
+
+  /// Get the underlying bytes of this Wtf8String.
+  pub fn as_bytes(&self) -> &[u8] {
+    &self.bytes
+  }
+
+  /// Turn the Wtf8String into the underlying Vec<u8>.
+  pub fn into_bytes(self) -> Vec<u8> {
+    self.bytes
+  }
+
+  /// Turn this Wtf8String into a String.
+  pub fn into_string(self) -> String {
+    if self.is_utf8 {
+      // SAFETY: The bytes are valid UTF-8.
+      unsafe { String::from_utf8_unchecked(self.bytes) }
     } else {
-      Err(bytes)
+      String::from_utf8_lossy(&self.bytes).into_owned()
     }
   }
 
-  /// Turn this OneByteString into a String. This operation is infallible, as
-  /// the bytes are guaranteed to be valid ASCII.
+  /// Get the value of this Wtf8String as a &str. If the bytes are not valid
+  /// UTF-8, lossy conversion will be used.
+  pub fn as_str(&self) -> Cow<'_, str> {
+    if self.is_utf8 {
+      // SAFETY: The bytes are valid UTF-8.
+      let str = unsafe { std::str::from_utf8_unchecked(&self.bytes) };
+      Cow::Borrowed(str)
+    } else {
+      String::from_utf8_lossy(&self.bytes)
+    }
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct OneByteString {
+  bytes: Vec<u8>,
+  is_ascii: bool,
+}
+
+impl OneByteString {
+  /// Create a new OneByteString from a Vec<u8>.
+  pub fn new(bytes: Vec<u8>) -> Self {
+    let is_ascii = bytes.is_ascii();
+    Self { bytes, is_ascii }
+  }
+
+  /// Get the underlying bytes of this OneByteString.
+  pub fn as_bytes(&self) -> &[u8] {
+    &self.bytes
+  }
+
+  /// Turn the OneByteString into the underlying Vec<u8>.
+  pub fn into_bytes(self) -> Vec<u8> {
+    self.bytes
+  }
+
+  /// Turn this OneByteString into a String.
   pub fn into_string(self) -> String {
-    // SAFETY: The bytes are valid ASCII, which is a subset of UTF-8.
-    unsafe { String::from_utf8_unchecked(self.0) }
+    if self.is_ascii {
+      // SAFETY: The bytes are valid ASCII, which is a subset of UTF-8.
+      unsafe { String::from_utf8_unchecked(self.bytes) }
+    } else {
+      // The string is latin1, so we have to convert it to UTF-8. WINDOWS_1252
+      // is the same as latin1.
+      let (str, _) =
+        encoding_rs::WINDOWS_1252.decode_without_bom_handling(&self.bytes);
+      match str {
+        Cow::Borrowed(_) => {
+          // SAFETY: The bytes are valid ASCII, which is a subset of UTF-8.
+          unsafe { String::from_utf8_unchecked(self.bytes) }
+        }
+        Cow::Owned(string) => string,
+      }
+    }
   }
 
   /// Get the value of this OneByteString as a &str. This operation i
   /// infallible, as the bytes are guaranteed to be valid ASCII.
-  pub fn as_str(&self) -> &str {
-    // SAFETY: The bytes are valid ASCII, which is a subset of UTF-8.
-    unsafe { std::str::from_utf8_unchecked(&self.0) }
+  pub fn as_str(&self) -> Cow<'_, str> {
+    if self.is_ascii {
+      // SAFETY: The bytes are valid ASCII, which is a subset of UTF-8.
+      let str = unsafe { std::str::from_utf8_unchecked(&self.bytes) };
+      Cow::Borrowed(str)
+    } else {
+      let (str, _) =
+        encoding_rs::WINDOWS_1252.decode_without_bom_handling(&self.bytes);
+      str
+    }
   }
 }
 
@@ -138,20 +198,19 @@ impl TwoByteString {
     Self(chars)
   }
 
+  /// Get the underlying bytes of this TwoByteString.
   pub fn as_bytes(&self) -> &[u16] {
     &self.0
   }
 
-  /// Turn this TwoByteString into a String. If the bytes are not valid UTF-16,
-  /// this operation will return an error.
-  pub fn to_string(&self) -> Result<String, FromUtf16Error> {
-    String::from_utf16(&self.0)
+  /// Turn the TwoByteString into the underlying Vec<u8>.
+  pub fn into_bytes(self) -> Vec<u16> {
+    self.0
   }
 
-  /// Turn this TwoByteString into a String lossily. Instead of returning an
-  /// error if the bytes are not valid UTF-16, this operation will replace
-  /// invalid bytes with the Unicode replacement character.
-  pub fn to_string_lossy(&self) -> String {
+  /// Turn this TwoByteString into a String. If the bytes are not valid UTF-16,
+  /// this operation will turn them into a String lossily.
+  pub fn to_string(&self) -> String {
     String::from_utf16_lossy(&self.0)
   }
 
@@ -257,6 +316,7 @@ impl std::fmt::Debug for HeapValue {
 #[derive(Clone)]
 pub enum PropertyKey {
   I32(i32),
+  U32(u32),
   String(StringValue),
 }
 
@@ -264,6 +324,7 @@ impl std::fmt::Debug for PropertyKey {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       Self::I32(index) => std::fmt::Debug::fmt(index, f),
+      Self::U32(index) => std::fmt::Debug::fmt(index, f),
       Self::String(key) => std::fmt::Debug::fmt(key, f),
     }
   }
@@ -352,19 +413,28 @@ pub struct Date {
   time_since_epoch: f64,
 }
 
+fn double_to_integer(x: f64) -> f64 {
+  if x.is_nan() || x == 0.0 {
+    return x;
+  }
+  if !x.is_finite() {
+    return x;
+  }
+  let x = if x > 0.0 { x.floor() } else { x.ceil() };
+  x + 0.0 // ensure that -0.0 is normalized to 0.0
+}
+
 impl Date {
-  pub fn new(time_since_epoch: f64) -> Result<Date, ()> {
-    if time_since_epoch.is_nan() {
-      return Ok(Date { time_since_epoch });
-    }
+  pub fn new(time_since_epoch: f64) -> Date {
     const MAX_TIME_IN_MS: f64 = (864_000_000i64 * 10_000_000i64) as f64;
-    if time_since_epoch.fract() != 0.0 {
-      return Err(());
-    }
     if time_since_epoch < -MAX_TIME_IN_MS || time_since_epoch > MAX_TIME_IN_MS {
-      return Err(());
+      let time_since_epoch = double_to_integer(time_since_epoch);
+      Date { time_since_epoch }
+    } else {
+      Date {
+        time_since_epoch: f64::NAN,
+      }
     }
-    Ok(Date { time_since_epoch })
   }
 
   pub fn ms_since_epoch(&self) -> Option<i64> {
