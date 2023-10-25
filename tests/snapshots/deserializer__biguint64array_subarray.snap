@@ -1,0 +1,40 @@
+---
+source: tests/deserializer.rs
+description: "=== SOURCE ===\nnew BigUint64Array([1n, 2n]).subarray(1, 2)"
+---
+=== VALUE ===
+HeapReference(*1)
+
+=== HEAP ===
+Heap {
+    0: ArrayBuffer {
+        data: [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        ],
+        max_byte_length: None,
+    },
+    1: ArrayBufferView {
+        kind: BigUint64Array,
+        buffer: *0,
+        byte_offset: 8,
+        length: 1,
+        is_length_tracking: false,
+        is_backed_by_rab: false,
+    },
+}
+

@@ -1,0 +1,5 @@
+---
+source: tests/display.rs
+description: "=== SOURCE ===\nnew Float64Array(6)"
+---
+new Float64Array(6)

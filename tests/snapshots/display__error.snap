@@ -1,0 +1,8 @@
+---
+source: tests/display.rs
+description: "=== SOURCE ===\nconst err = new Error(undefined); err.cause = err; err"
+---
+const v0 = new Error();
+v0["cause"] = v0;
+v0["stack"] = "Error\u{a}    at <anonymous>:1:13";
+v0

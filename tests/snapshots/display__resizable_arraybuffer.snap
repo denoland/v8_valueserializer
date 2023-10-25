@@ -1,0 +1,9 @@
+---
+source: tests/display.rs
+description: "=== SOURCE ===\nconst a = new ArrayBuffer(5, { maxByteLength: 10 }); new Uint8Array(a).set([1, 2, 3, 4]); a"
+---
+const v0 = new ArrayBuffer(5, { maxByteLength: 10 });
+new Uint8Array(v0).set([
+  0x01, 0x02, 0x03, 0x04, 0x00,
+]);
+v0

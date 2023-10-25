@@ -1,0 +1,11 @@
+---
+source: tests/display.rs
+description: "=== SOURCE ===\nconst a = {}; const b = new Array(2); b.a = a; b.x = 1; a.b = b; a"
+---
+const v0 = new Array(2);
+const v1 = {
+  "b": v0,
+};
+v0["a"] = v1;
+v0["x"] = 1;
+v1

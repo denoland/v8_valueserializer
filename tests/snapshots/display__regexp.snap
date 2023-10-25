@@ -1,0 +1,5 @@
+---
+source: tests/display.rs
+description: "=== SOURCE ===\n/foo/gm"
+---
+new RegExp("foo", "gm")

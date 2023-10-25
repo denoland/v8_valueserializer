@@ -14,7 +14,7 @@ use crate::value::ArrayBufferViewKind;
 use crate::value::Date;
 use crate::value::DenseArray;
 use crate::value::Error;
-use crate::value::ErrorKind;
+use crate::value::ErrorName;
 use crate::value::Heap;
 use crate::value::HeapBuilder;
 use crate::value::HeapValue;
@@ -23,6 +23,7 @@ use crate::value::Object;
 use crate::value::OneByteString;
 use crate::value::PropertyKey;
 use crate::value::RegExp;
+use crate::value::RegExpFlags;
 use crate::value::Set;
 use crate::value::SparseArray;
 use crate::value::Value;
@@ -107,6 +108,8 @@ pub enum ParseErrorKind {
   SharedObjectNotSupported,
   #[error("an object is too deeply nested, hit recursion depth limit")]
   TooDeeplyNested,
+  #[error("invalid regexp flags: {:b}", .0)]
+  InvalidRegExpFlags(u32),
 }
 
 struct Input<'a> {
@@ -530,7 +533,16 @@ fn read_regexp(
 ) -> Result<RegExp, ParseError> {
   let pattern = read_string_value(de, input)?;
   let flags = input.read_varint()?;
-  // todo: validate flags
+  let flags = RegExpFlags::from_bits(flags)
+    .ok_or_else(|| input.err(ParseErrorKind::InvalidRegExpFlags(flags)))?;
+  if flags.contains(RegExpFlags::LINEAR) {
+    return Err(input.err(ParseErrorKind::InvalidRegExpFlags(flags.bits())));
+  }
+  if flags.contains(RegExpFlags::UNICODE)
+    && flags.contains(RegExpFlags::UNICODE_SETS)
+  {
+    return Err(input.err(ParseErrorKind::InvalidRegExpFlags(flags.bits())));
+  }
   Ok(RegExp { pattern, flags })
 }
 
@@ -741,24 +753,24 @@ fn read_js_error(
   input: &mut Input<'_>,
   heap: &mut HeapBuilder,
 ) -> Result<Error, ParseError> {
-  let mut kind = ErrorKind::Error;
+  let mut name = ErrorName::Error;
   let mut message = None;
   let mut cause = None;
   let mut stack = None;
   loop {
     let tag = input.read_varint_u8()?;
     if tag == ErrorTag::EvalErrorPrototype as u8 {
-      kind = ErrorKind::EvalError;
+      name = ErrorName::EvalError;
     } else if tag == ErrorTag::RangeErrorPrototype as u8 {
-      kind = ErrorKind::RangeError;
+      name = ErrorName::RangeError;
     } else if tag == ErrorTag::ReferenceErrorPrototype as u8 {
-      kind = ErrorKind::ReferenceError;
+      name = ErrorName::ReferenceError;
     } else if tag == ErrorTag::SyntaxErrorPrototype as u8 {
-      kind = ErrorKind::SyntaxError;
+      name = ErrorName::SyntaxError;
     } else if tag == ErrorTag::TypeErrorPrototype as u8 {
-      kind = ErrorKind::TypeError;
+      name = ErrorName::TypeError;
     } else if tag == ErrorTag::UriErrorPrototype as u8 {
-      kind = ErrorKind::UriError;
+      name = ErrorName::UriError;
     } else if tag == ErrorTag::Message as u8 {
       let str = read_string_value(de, input)?;
       message = Some(str);
@@ -776,7 +788,7 @@ fn read_js_error(
   }
 
   Ok(Error {
-    kind,
+    name,
     message,
     stack,
     cause,

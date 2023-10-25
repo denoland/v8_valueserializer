@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::fmt::Debug;
+use std::fmt::Display;
 
 use num_bigint::BigInt;
 use rand::Rng;
@@ -405,7 +406,53 @@ impl std::fmt::Debug for SparseArray {
 #[derive(Debug)]
 pub struct RegExp {
   pub pattern: StringValue,
-  pub flags: u32,
+  pub flags: RegExpFlags,
+}
+
+bitflags::bitflags! {
+  #[derive(Debug, Clone, Copy)]
+  #[repr(transparent)]
+  pub struct RegExpFlags: u32 {
+    const GLOBAL = 1 << 0;
+    const IGNORE_CASE = 1 << 1;
+    const MULTILINE = 1 << 2;
+    const STICKY = 1 << 3;
+    const UNICODE = 1 << 4;
+    const DOT_ALL = 1 << 5;
+    const LINEAR = 1 << 6;
+    const HAS_INDICES = 1 << 7;
+    const UNICODE_SETS = 1 << 8;
+  }
+}
+
+impl Display for RegExpFlags {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    if self.contains(Self::GLOBAL) {
+      write!(f, "g")?;
+    }
+    if self.contains(Self::IGNORE_CASE) {
+      write!(f, "i")?;
+    }
+    if self.contains(Self::MULTILINE) {
+      write!(f, "m")?;
+    }
+    if self.contains(Self::STICKY) {
+      write!(f, "y")?;
+    }
+    if self.contains(Self::UNICODE) {
+      write!(f, "u")?;
+    }
+    if self.contains(Self::DOT_ALL) {
+      write!(f, "s")?;
+    }
+    if self.contains(Self::HAS_INDICES) {
+      write!(f, "d")?;
+    }
+    if self.contains(Self::UNICODE_SETS) {
+      write!(f, "v")?;
+    }
+    Ok(())
+  }
 }
 
 #[derive(Debug)]
@@ -429,7 +476,8 @@ fn double_to_integer(x: f64) -> f64 {
 impl Date {
   pub fn new(time_since_epoch: f64) -> Date {
     const MAX_TIME_IN_MS: f64 = (864_000_000i64 * 10_000_000i64) as f64;
-    if time_since_epoch >= -MAX_TIME_IN_MS && time_since_epoch <= MAX_TIME_IN_MS {
+    if time_since_epoch >= -MAX_TIME_IN_MS && time_since_epoch <= MAX_TIME_IN_MS
+    {
       let time_since_epoch = double_to_integer(time_since_epoch);
       Date { time_since_epoch }
     } else {
@@ -494,9 +542,119 @@ impl ArrayBuffer {
   pub fn byte_length(&self) -> u32 {
     self.data.len() as u32
   }
+
+  pub fn as_u8_slice(&self) -> &[u8] {
+    &self.data
+  }
+
+  pub fn as_i8_slice(&self) -> &[i8] {
+    // SAFETY: i8 and u8 have the same size and alignment.
+    unsafe {
+      std::slice::from_raw_parts(
+        self.data.as_ptr() as *const i8,
+        self.data.len(),
+      )
+    }
+  }
+
+  pub fn as_u16_slice(&self) -> &[u16] {
+    assert!(self.byte_length() % 2 == 0);
+    // SAFETY: data is always aligned to 8 bytes, and we checked that the length
+    // is a multiple of 2 (because one u16 == two u8).
+    unsafe {
+      std::slice::from_raw_parts(
+        self.data.as_ptr() as *const u16,
+        self.data.len() / 2,
+      )
+    }
+  }
+
+  pub fn as_i16_slice(&self) -> &[i16] {
+    assert!(self.byte_length() % 2 == 0);
+    // SAFETY: data is always aligned to 8 bytes, and we checked that the length
+    // is a multiple of 2 (because one i16 == two u8).
+    unsafe {
+      std::slice::from_raw_parts(
+        self.data.as_ptr() as *const i16,
+        self.data.len() / 2,
+      )
+    }
+  }
+
+  pub fn as_u32_slice(&self) -> &[u32] {
+    assert!(self.byte_length() % 4 == 0);
+    // SAFETY: data is always aligned to 8 bytes, and we checked that the length
+    // is a multiple of 4 (because one u32 == four u8).
+    unsafe {
+      std::slice::from_raw_parts(
+        self.data.as_ptr() as *const u32,
+        self.data.len() / 4,
+      )
+    }
+  }
+
+  pub fn as_i32_slice(&self) -> &[i32] {
+    assert!(self.byte_length() % 4 == 0);
+    // SAFETY: data is always aligned to 8 bytes, and we checked that the length
+    // is a multiple of 4 (because one i32 == four u8).
+    unsafe {
+      std::slice::from_raw_parts(
+        self.data.as_ptr() as *const i32,
+        self.data.len() / 4,
+      )
+    }
+  }
+
+  pub fn as_u64_slice(&self) -> &[u64] {
+    assert!(self.byte_length() % 8 == 0);
+    // SAFETY: data is always aligned to 8 bytes, and we checked that the length
+    // is a multiple of 8 (because one u64 == eight u8).
+    unsafe {
+      std::slice::from_raw_parts(
+        self.data.as_ptr() as *const u64,
+        self.data.len() / 8,
+      )
+    }
+  }
+
+  pub fn as_i64_slice(&self) -> &[i64] {
+    assert!(self.byte_length() % 8 == 0);
+    // SAFETY: data is always aligned to 8 bytes, and we checked that the length
+    // is a multiple of 8 (because one i64 == eight u8).
+    unsafe {
+      std::slice::from_raw_parts(
+        self.data.as_ptr() as *const i64,
+        self.data.len() / 8,
+      )
+    }
+  }
+
+  pub fn as_f32_slice(&self) -> &[f32] {
+    assert!(self.byte_length() % 4 == 0);
+    // SAFETY: data is always aligned to 8 bytes, and we checked that the length
+    // is a multiple of 4 (because one f32 == four u8).
+    unsafe {
+      std::slice::from_raw_parts(
+        self.data.as_ptr() as *const f32,
+        self.data.len() / 4,
+      )
+    }
+  }
+
+  pub fn as_f64_slice(&self) -> &[f64] {
+    assert!(self.byte_length() % 8 == 0);
+    // SAFETY: data is always aligned to 8 bytes, and we checked that the length
+    // is a multiple of 8 (because one f64 == eight u8).
+    unsafe {
+      std::slice::from_raw_parts(
+        self.data.as_ptr() as *const f64,
+        self.data.len() / 8,
+      )
+    }
+  }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ArrayBufferViewKind {
   Int8Array,
   Uint8Array,
@@ -512,6 +670,44 @@ pub enum ArrayBufferViewKind {
   DataView,
 }
 
+impl Display for ArrayBufferViewKind {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::Int8Array => write!(f, "Int8Array"),
+      Self::Uint8Array => write!(f, "Uint8Array"),
+      Self::Uint8ClampedArray => write!(f, "Uint8ClampedArray"),
+      Self::Int16Array => write!(f, "Int16Array"),
+      Self::Uint16Array => write!(f, "Uint16Array"),
+      Self::Int32Array => write!(f, "Int32Array"),
+      Self::Uint32Array => write!(f, "Uint32Array"),
+      Self::Float32Array => write!(f, "Float32Array"),
+      Self::Float64Array => write!(f, "Float64Array"),
+      Self::BigInt64Array => write!(f, "BigInt64Array"),
+      Self::BigUint64Array => write!(f, "BigUint64Array"),
+      Self::DataView => write!(f, "DataView"),
+    }
+  }
+}
+
+impl ArrayBufferViewKind {
+  pub fn byte_width(&self) -> u32 {
+    match self {
+      Self::Int8Array => 1,
+      Self::Uint8Array => 1,
+      Self::Uint8ClampedArray => 1,
+      Self::Int16Array => 2,
+      Self::Uint16Array => 2,
+      Self::Int32Array => 4,
+      Self::Uint32Array => 4,
+      Self::Float32Array => 4,
+      Self::Float64Array => 8,
+      Self::BigInt64Array => 8,
+      Self::BigUint64Array => 8,
+      Self::DataView => 1,
+    }
+  }
+}
+
 #[derive(Debug)]
 pub struct ArrayBufferView {
   pub kind: ArrayBufferViewKind,
@@ -523,7 +719,7 @@ pub struct ArrayBufferView {
 }
 
 #[derive(Debug)]
-pub enum ErrorKind {
+pub enum ErrorName {
   Error,
   EvalError,
   RangeError,
@@ -533,9 +729,23 @@ pub enum ErrorKind {
   UriError,
 }
 
+impl Display for ErrorName {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::Error => write!(f, "Error"),
+      Self::EvalError => write!(f, "EvalError"),
+      Self::RangeError => write!(f, "RangeError"),
+      Self::ReferenceError => write!(f, "ReferenceError"),
+      Self::SyntaxError => write!(f, "SyntaxError"),
+      Self::TypeError => write!(f, "TypeError"),
+      Self::UriError => write!(f, "URIError"),
+    }
+  }
+}
+
 #[derive(Debug)]
 pub struct Error {
-  pub kind: ErrorKind,
+  pub name: ErrorName,
   pub message: Option<StringValue>,
   pub stack: Option<StringValue>,
   pub cause: Option<Value>,

@@ -1,0 +1,5 @@
+---
+source: tests/display.rs
+description: "=== SOURCE ===\nnew Uint8Array([0, 0, 0])"
+---
+new Uint8Array(3)

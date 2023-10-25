@@ -12,6 +12,7 @@ name = "fuzz_deserializer_repro"
 path = "fuzz/deserializer_repro.rs"
 
 [dependencies]
+bitflags = "2.4.1"
 encoding_rs = "0.8"
 indexmap = "2.0.2"
 insta = "1.34.0"
