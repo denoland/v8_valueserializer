@@ -1,24 +1,31 @@
+use std::path::PathBuf;
+
 use v8_valueserializer::ParseError;
 use v8_valueserializer::ParseErrorKind;
 use v8_valueserializer::ValueDeserializer;
 mod util;
 
 fn main() {
-  let path = std::env::args().nth(1).unwrap();
-  let fuzzer_paths = std::fs::read_dir(path)
-    .unwrap()
-    .map(|x| x.unwrap().path())
-    .collect::<Vec<_>>();
-  let mut crash_paths = fuzzer_paths
-    .into_iter()
-    .flat_map(|path| {
-      std::fs::read_dir(path.join("crashes"))
-        .unwrap()
-        .map(|x| x.unwrap().path())
-        .filter(|path| !path.ends_with("README.txt"))
-    })
-    .collect::<Vec<_>>();
-  crash_paths.sort();
+  let path = PathBuf::from(std::env::args().nth(1).unwrap());
+  let crash_paths = if path.is_dir() {
+    let fuzzer_paths = std::fs::read_dir(path)
+      .unwrap()
+      .map(|x| x.unwrap().path())
+      .collect::<Vec<_>>();
+    let mut crash_paths = fuzzer_paths
+      .into_iter()
+      .flat_map(|path| {
+        std::fs::read_dir(path.join("crashes"))
+          .unwrap()
+          .map(|x| x.unwrap().path())
+          .filter(|path| !path.ends_with("README.txt"))
+      })
+      .collect::<Vec<_>>();
+    crash_paths.sort();
+    crash_paths
+  } else {
+    vec![path]
+  };
   for crash_path in crash_paths {
     println!("\n===========================================================");
     println!("crash_path: {:?}", crash_path);
@@ -29,7 +36,7 @@ fn main() {
     // can not parse the input, the input is not valid and we can skip parsing.
     if res.is_err() {
       let mut isolate = util::Isolate::new();
-      if let Err(err) = isolate.parse_serialized(&data) {
+      if let Err(err) = isolate.deserialize(&data) {
         println!("v8 failed: {:?}", err);
         continue;
       }
@@ -43,6 +50,7 @@ fn main() {
           | ParseErrorKind::SharedObjectNotSupported
           | ParseErrorKind::SharedArrayBufferNotSupported
           | ParseErrorKind::WasmModuleTransferNotSupported
+          | ParseErrorKind::InvalidRegExpFlags(..) // https://bugs.chromium.org/p/v8/issues/detail?id=14412
           | ParseErrorKind::TooDeeplyNested,
         ..
       }) => {

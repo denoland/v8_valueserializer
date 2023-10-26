@@ -1,10 +1,53 @@
 use std::borrow::Cow;
+use std::cell::RefCell;
+use std::collections::HashSet;
 use std::fmt::Debug;
 use std::fmt::Display;
+use std::rc::Rc;
 
 use num_bigint::BigInt;
 use rand::Rng;
 use thiserror::Error;
+
+struct HeapEqContext<'a, 'b, T> {
+  heap: &'a Heap,
+  value: &'b T,
+  visited: Rc<RefCell<HashSet<HeapReference>>>,
+}
+
+impl<'a, 'b, T> HeapEqContext<'a, 'b, T> {
+  fn next<N>(&self, value: &'b N) -> HeapEqContext<'a, 'b, N> {
+    HeapEqContext {
+      heap: self.heap,
+      value,
+      visited: self.visited.clone(),
+    }
+  }
+}
+
+trait HeapEq: Sized {
+  fn eq(left: &HeapEqContext<Self>, right: &HeapEqContext<Self>) -> bool;
+}
+
+impl<'a, 'b, T: HeapEq> PartialEq for HeapEqContext<'a, 'b, T> {
+  fn eq(&self, other: &Self) -> bool {
+    T::eq(self, other)
+  }
+}
+
+pub fn value_eq(left: (&Value, &Heap), right: (&Value, &Heap)) -> bool {
+  let left = HeapEqContext {
+    heap: left.1,
+    value: left.0,
+    visited: Rc::new(RefCell::new(HashSet::new())),
+  };
+  let right = HeapEqContext {
+    heap: right.1,
+    value: right.0,
+    visited: Rc::new(RefCell::new(HashSet::new())),
+  };
+  left == right
+}
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -19,11 +62,57 @@ pub enum Value {
   HeapReference(HeapReference),
 }
 
+impl HeapEq for Value {
+  fn eq(left: &HeapEqContext<Self>, right: &HeapEqContext<Self>) -> bool {
+    match (left.value, right.value) {
+      (Value::Undefined, Value::Undefined) => true,
+      (Value::Null, Value::Null) => true,
+      (Value::Bool(a), Value::Bool(b)) => a == b,
+      (Value::I32(a), Value::I32(b)) => a == b,
+      (Value::U32(a), Value::U32(b)) => a == b,
+      (Value::Double(a), Value::Double(b)) if a.is_nan() && b.is_nan() => true,
+      (Value::Double(a), Value::Double(b)) => a == b,
+      (Value::BigInt(a), Value::BigInt(b)) => a == b,
+      (Value::String(a), Value::String(b)) => a == b,
+      (Value::HeapReference(a), Value::HeapReference(b)) => {
+        let a = left.next(a);
+        let b = right.next(b);
+        a == b
+      }
+      _ => false,
+    }
+  }
+}
+
 #[derive(Clone)]
 pub enum StringValue {
   Wtf8(Wtf8String),
   OneByte(OneByteString),
   TwoByte(TwoByteString),
+}
+
+impl PartialEq for StringValue {
+  fn eq(&self, other: &Self) -> bool {
+    let left = match self {
+      StringValue::Wtf8(str) => {
+        // Safety: The memory layout of Wtf8 and [u8] is the same.
+        let wtf8: &wtf8::Wtf8 = unsafe { std::mem::transmute(str.as_bytes()) };
+        wtf8.to_ill_formed_utf16().into_iter().collect()
+      }
+      StringValue::OneByte(str) => str.as_str().encode_utf16().collect(),
+      StringValue::TwoByte(str) => str.0.clone(),
+    };
+    let right = match other {
+      StringValue::Wtf8(wtf8) => {
+        // Safety: The memory layout of Wtf8 and [u8] is the same.
+        let wtf8: &wtf8::Wtf8 = unsafe { std::mem::transmute(wtf8.as_bytes()) };
+        wtf8.to_ill_formed_utf16().into_iter().collect()
+      }
+      StringValue::OneByte(str) => str.as_str().encode_utf16().collect(),
+      StringValue::TwoByte(bytes) => bytes.0.clone(),
+    };
+    left == right
+  }
 }
 
 impl std::fmt::Debug for StringValue {
@@ -160,10 +249,8 @@ impl OneByteString {
       // SAFETY: The bytes are valid ASCII, which is a subset of UTF-8.
       unsafe { String::from_utf8_unchecked(self.bytes) }
     } else {
-      // The string is latin1, so we have to convert it to UTF-8. WINDOWS_1252
-      // is the same as latin1.
-      let (str, _) =
-        encoding_rs::WINDOWS_1252.decode_without_bom_handling(&self.bytes);
+      // The string is Latin1, so we have to convert it to UTF-8.
+      let str = encoding_rs::mem::decode_latin1(&self.bytes);
       match str {
         Cow::Borrowed(_) => {
           // SAFETY: The bytes are valid ASCII, which is a subset of UTF-8.
@@ -182,9 +269,7 @@ impl OneByteString {
       let str = unsafe { std::str::from_utf8_unchecked(&self.bytes) };
       Cow::Borrowed(str)
     } else {
-      let (str, _) =
-        encoding_rs::WINDOWS_1252.decode_without_bom_handling(&self.bytes);
-      str
+      encoding_rs::mem::decode_latin1(&self.bytes)
     }
   }
 }
@@ -285,6 +370,46 @@ pub enum HeapValue {
   Error(Error),
 }
 
+impl HeapEq for HeapValue {
+  fn eq(left: &HeapEqContext<Self>, right: &HeapEqContext<Self>) -> bool {
+    match (left.value, right.value) {
+      (HeapValue::BooleanObject(a), HeapValue::BooleanObject(b)) => {
+        println!("BooleanObject {}", a == b);
+        a == b
+      }
+      (HeapValue::NumberObject(a), HeapValue::NumberObject(b))
+        if a.is_nan() && b.is_nan() =>
+      {
+        true
+      }
+      (HeapValue::NumberObject(a), HeapValue::NumberObject(b)) => a == b,
+      (HeapValue::BigIntObject(a), HeapValue::BigIntObject(b)) => a == b,
+      (HeapValue::StringObject(a), HeapValue::StringObject(b)) => a == b,
+      (HeapValue::RegExp(a), HeapValue::RegExp(b)) => a == b,
+      (HeapValue::Date(a), HeapValue::Date(b)) => a == b,
+      (HeapValue::Object(a), HeapValue::Object(b)) => {
+        left.next(a) == right.next(b)
+      }
+      (HeapValue::SparseArray(a), HeapValue::SparseArray(b)) => {
+        left.next(a) == right.next(b)
+      }
+      (HeapValue::DenseArray(a), HeapValue::DenseArray(b)) => {
+        left.next(a) == right.next(b)
+      }
+      (HeapValue::Map(a), HeapValue::Map(b)) => left.next(a) == right.next(b),
+      (HeapValue::Set(a), HeapValue::Set(b)) => left.next(a) == right.next(b),
+      (HeapValue::ArrayBuffer(a), HeapValue::ArrayBuffer(b)) => a == b,
+      (HeapValue::ArrayBufferView(a), HeapValue::ArrayBufferView(b)) => {
+        left.next(a) == right.next(b)
+      }
+      (HeapValue::Error(a), HeapValue::Error(b)) => {
+        left.next(a) == right.next(b)
+      }
+      _ => false,
+    }
+  }
+}
+
 impl std::fmt::Debug for HeapValue {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
@@ -322,6 +447,24 @@ pub enum PropertyKey {
   String(StringValue),
 }
 
+impl PartialEq for PropertyKey {
+  fn eq(&self, other: &Self) -> bool {
+    let left = match self {
+      Self::I32(i) => Cow::Owned(i.to_string()),
+      Self::U32(u) => Cow::Owned(u.to_string()),
+      Self::Double(d) => Cow::Owned(d.to_string()),
+      Self::String(s) => s.to_string(),
+    };
+    let right = match other {
+      Self::I32(i) => Cow::Owned(i.to_string()),
+      Self::U32(u) => Cow::Owned(u.to_string()),
+      Self::Double(d) => Cow::Owned(d.to_string()),
+      Self::String(s) => s.to_string(),
+    };
+    left == right
+  }
+}
+
 impl std::fmt::Debug for PropertyKey {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
@@ -335,6 +478,37 @@ impl std::fmt::Debug for PropertyKey {
 
 pub struct Object {
   pub properties: Vec<(PropertyKey, Value)>,
+}
+
+impl HeapEq for Object {
+  fn eq(left: &HeapEqContext<Self>, right: &HeapEqContext<Self>) -> bool {
+    left.next(&left.value.properties) == right.next(&right.value.properties)
+  }
+}
+
+impl HeapEq for Vec<(PropertyKey, Value)> {
+  fn eq(left: &HeapEqContext<Self>, right: &HeapEqContext<Self>) -> bool {
+    if left.value.len() != right.value.len() {
+      return false;
+    }
+    let mut left_properties = left.value.iter();
+    let mut right_properties = right.value.iter();
+    loop {
+      match (left_properties.next(), right_properties.next()) {
+        (Some((left_key, left_value)), Some((right_key, right_value))) => {
+          if left_key != right_key {
+            return false;
+          }
+          if left.next(left_value) != right.next(right_value) {
+            return false;
+          }
+        }
+        (None, None) => break,
+        _ => return false,
+      }
+    }
+    true
+  }
 }
 
 impl std::fmt::Debug for Object {
@@ -355,6 +529,29 @@ pub struct DenseArray {
   pub elements: Vec<Option<Value>>,
   /// Additional properties of the array object.
   pub properties: Vec<(PropertyKey, Value)>,
+}
+
+impl HeapEq for DenseArray {
+  fn eq(left: &HeapEqContext<Self>, right: &HeapEqContext<Self>) -> bool {
+    if left.value.elements.len() != right.value.elements.len() {
+      return false;
+    }
+    let mut left_elements = left.value.elements.iter();
+    let mut right_elements = right.value.elements.iter();
+    loop {
+      match (left_elements.next(), right_elements.next()) {
+        (Some(Some(left_value)), Some(Some(right_value))) => {
+          if left.next(left_value) != right.next(right_value) {
+            return false;
+          }
+        }
+        (Some(None), Some(None)) => {}
+        (None, None) => break,
+        _ => return false,
+      }
+    }
+    left.next(&left.value.properties) == right.next(&right.value.properties)
+  }
 }
 
 struct Hole;
@@ -392,6 +589,14 @@ pub struct SparseArray {
   pub properties: Vec<(PropertyKey, Value)>,
 }
 
+impl HeapEq for SparseArray {
+  fn eq(left: &HeapEqContext<Self>, right: &HeapEqContext<Self>) -> bool {
+    left.value.length == right.value.length
+      && left.next(&left.value.properties)
+        == right.next(&right.value.properties)
+  }
+}
+
 impl std::fmt::Debug for SparseArray {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(f, "SparseArray({}) ", self.length)?;
@@ -403,14 +608,14 @@ impl std::fmt::Debug for SparseArray {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct RegExp {
   pub pattern: StringValue,
   pub flags: RegExpFlags,
 }
 
 bitflags::bitflags! {
-  #[derive(Debug, Clone, Copy)]
+  #[derive(Debug, Clone, Copy, PartialEq, Eq)]
   #[repr(transparent)]
   pub struct RegExpFlags: u32 {
     const GLOBAL = 1 << 0;
@@ -462,6 +667,13 @@ pub struct Date {
   time_since_epoch: f64,
 }
 
+impl PartialEq for Date {
+  fn eq(&self, other: &Self) -> bool {
+    self.time_since_epoch.is_nan() && other.time_since_epoch.is_nan()
+      || self.time_since_epoch == other.time_since_epoch
+  }
+}
+
 fn double_to_integer(x: f64) -> f64 {
   if x.is_nan() || x == 0.0 {
     return x;
@@ -501,6 +713,31 @@ pub struct Map {
   pub entries: Vec<(Value, Value)>,
 }
 
+impl HeapEq for Map {
+  fn eq(left: &HeapEqContext<Self>, right: &HeapEqContext<Self>) -> bool {
+    if left.value.entries.len() != right.value.entries.len() {
+      return false;
+    }
+    let mut left_entries = left.value.entries.iter();
+    let mut right_entries = right.value.entries.iter();
+    loop {
+      match (left_entries.next(), right_entries.next()) {
+        (Some((left_key, left_value)), Some((right_key, right_value))) => {
+          if left.next(left_key) != right.next(right_key) {
+            return false;
+          }
+          if left.next(left_value) != right.next(right_value) {
+            return false;
+          }
+        }
+        (None, None) => break,
+        _ => return false,
+      }
+    }
+    true
+  }
+}
+
 impl std::fmt::Debug for Map {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(f, "Map ")?;
@@ -516,6 +753,28 @@ pub struct Set {
   pub values: Vec<Value>,
 }
 
+impl HeapEq for Set {
+  fn eq(left: &HeapEqContext<Self>, right: &HeapEqContext<Self>) -> bool {
+    if left.value.values.len() != right.value.values.len() {
+      return false;
+    }
+    let mut left_values = left.value.values.iter();
+    let mut right_values = right.value.values.iter();
+    loop {
+      match (left_values.next(), right_values.next()) {
+        (Some(left_value), Some(right_value)) => {
+          if left.next(left_value) != right.next(right_value) {
+            return false;
+          }
+        }
+        (None, None) => break,
+        _ => return false,
+      }
+    }
+    true
+  }
+}
+
 impl std::fmt::Debug for Set {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(f, "Set ")?;
@@ -527,7 +786,7 @@ impl std::fmt::Debug for Set {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ArrayBuffer {
   /// The raw bytes of the buffer. We ensure that this is always aligned to 8
   /// bytes, so that we can cast it to a [[u64] / [i64]] when appropriate.
@@ -718,7 +977,18 @@ pub struct ArrayBufferView {
   pub is_backed_by_rab: bool,
 }
 
-#[derive(Debug)]
+impl HeapEq for ArrayBufferView {
+  fn eq(left: &HeapEqContext<Self>, right: &HeapEqContext<Self>) -> bool {
+    left.value.kind == right.value.kind
+      && left.next(&left.value.buffer) == right.next(&right.value.buffer)
+      && left.value.byte_offset == right.value.byte_offset
+      && left.value.length == right.value.length
+      && left.value.is_length_tracking == right.value.is_length_tracking
+      && left.value.is_backed_by_rab == right.value.is_backed_by_rab
+  }
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub enum ErrorName {
   Error,
   EvalError,
@@ -749,6 +1019,16 @@ pub struct Error {
   pub message: Option<StringValue>,
   pub stack: Option<StringValue>,
   pub cause: Option<Value>,
+}
+
+impl HeapEq for Error {
+  fn eq(left: &HeapEqContext<Self>, right: &HeapEqContext<Self>) -> bool {
+    left.value.name == right.value.name
+      && left.value.message == right.value.message
+      && left.value.stack == right.value.stack
+      && left.value.cause.as_ref().map(|c| left.next(c))
+        == right.value.cause.as_ref().map(|c| right.next(c))
+  }
 }
 
 pub struct HeapBuilder {
@@ -876,6 +1156,25 @@ impl Heap {
 pub struct HeapReference {
   heap_id: usize,
   index: usize,
+}
+
+impl HeapEq for HeapReference {
+  fn eq(left: &HeapEqContext<Self>, right: &HeapEqContext<Self>) -> bool {
+    if left.value.index != right.value.index {
+      return false;
+    }
+    let left_inserted = left.visited.borrow_mut().insert(*left.value);
+    let right_inserted = right.visited.borrow_mut().insert(*right.value);
+    if left_inserted != right_inserted {
+      return false;
+    }
+    if left_inserted && right_inserted {
+      left.next(left.value.open(left.heap))
+        == right.next(right.value.open(right.heap))
+    } else {
+      true
+    }
+  }
 }
 
 impl std::fmt::Debug for HeapReference {

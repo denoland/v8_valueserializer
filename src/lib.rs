@@ -9,6 +9,7 @@ pub use crate::de::ValueDeserializer;
 pub use crate::display::display;
 pub use crate::display::DisplayFormat;
 pub use crate::display::DisplayOptions;
+pub use crate::value::value_eq;
 pub use crate::value::Heap;
 pub use crate::value::HeapReference;
 pub use crate::value::HeapValue;

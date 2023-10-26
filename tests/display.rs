@@ -25,3 +25,5 @@ display_test!(circular_reference_ordering r#"const a = {}; const b = new Array(2
 display_test!(error r#"const err = new Error(undefined); err.cause = err; err"#);
 
 display_test!(regexp r#"/foo/mg"#);
+
+display_test!(onebyte r#""è÷\u{0}""#);

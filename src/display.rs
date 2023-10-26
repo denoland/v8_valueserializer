@@ -241,7 +241,7 @@ impl<'h, W: Write> Displayer<'h, W> {
 
     match opts.format {
       DisplayFormat::Expression if multiline => {
-        writeln!(this.writer, "(function() {{ ")?;
+        writeln!(this.writer, "(function() {{")?;
         this.indent += 1;
       }
       DisplayFormat::Expression | DisplayFormat::Repl | DisplayFormat::Eval => {
@@ -286,7 +286,7 @@ impl<'h, W: Write> Displayer<'h, W> {
                 value,
                 requires_ordering,
               } => {
-                let Some(ident) = this.idents.get(&target) else {
+                let Some(ident) = this.idents.get(&target).cloned() else {
                   this.follow_up_tasks.push(task);
                   continue;
                 };
@@ -301,6 +301,7 @@ impl<'h, W: Write> Displayer<'h, W> {
                   this.follow_up_tasks.push(task);
                   continue;
                 };
+                this.display_indent(0)?;
                 write!(this.writer, "{}[", ident)?;
                 this.display_property_key(&key)?;
                 write!(this.writer, "] = ")?;
@@ -308,7 +309,7 @@ impl<'h, W: Write> Displayer<'h, W> {
                 writeln!(this.writer, ";")?;
               }
               FollowUpTasks::MapSet { target, key, value } => {
-                let Some(ident) = this.idents.get(&target) else {
+                let Some(ident) = this.idents.get(&target).cloned() else {
                   this.follow_up_tasks.push(task);
                   continue;
                 };
@@ -318,6 +319,7 @@ impl<'h, W: Write> Displayer<'h, W> {
                   this.follow_up_tasks.push(task);
                   continue;
                 }
+                this.display_indent(0)?;
                 write!(this.writer, "{}.set(", ident)?;
                 this.display_value(&key)?;
                 write!(this.writer, ", ")?;
@@ -325,7 +327,7 @@ impl<'h, W: Write> Displayer<'h, W> {
                 writeln!(this.writer, ");")?;
               }
               FollowUpTasks::SetAdd { target, value } => {
-                let Some(ident) = this.idents.get(&target) else {
+                let Some(ident) = this.idents.get(&target).cloned() else {
                   this.follow_up_tasks.push(task);
                   continue;
                 };
@@ -333,6 +335,7 @@ impl<'h, W: Write> Displayer<'h, W> {
                   this.follow_up_tasks.push(task);
                   continue;
                 }
+                this.display_indent(0)?;
                 write!(this.writer, "{}.add(", ident)?;
                 this.display_value(&value)?;
                 writeln!(this.writer, ");")?;
@@ -383,7 +386,7 @@ impl<'h, W: Write> Displayer<'h, W> {
 
     match opts.format {
       DisplayFormat::Expression if multiline => {
-        write!(this.writer, "\n)()")?;
+        write!(this.writer, "\n}})()")?;
         this.indent -= 1;
       }
       DisplayFormat::Expression | DisplayFormat::Repl | DisplayFormat::Eval => {
@@ -520,7 +523,7 @@ impl<'h, W: Write> Displayer<'h, W> {
         write!(self.writer, ")")?;
       }
       HeapValue::BigIntObject(val) => {
-        write!(self.writer, "BigInt({})", val)?;
+        write!(self.writer, "new Object({}n)", val)?;
       }
       HeapValue::StringObject(str) => {
         write!(self.writer, "new String(")?;
@@ -625,46 +628,54 @@ impl<'h, W: Write> Displayer<'h, W> {
         }
       }
       HeapValue::Map(map) => {
-        writeln!(self.writer, "new Map([")?;
-        for (key, value) in &map.entries {
-          if self.is_ready_to_render(key) || self.is_ready_to_render(value) {
-            self.display_indent(1)?;
-            write!(self.writer, "[")?;
-            self.display_value(key)?;
-            write!(self.writer, ", ")?;
-            self.indent += 1;
-            self.display_value(value)?;
-            self.indent -= 1;
-            writeln!(self.writer, "],")?;
-          } else {
-            self.follow_up_tasks.push(FollowUpTasks::MapSet {
-              target: *reference,
-              key: key.clone(),
-              value: value.clone(),
-            });
+        if map.entries.is_empty() {
+          writeln!(self.writer, "new Map()")?;
+        } else {
+          writeln!(self.writer, "new Map([")?;
+          for (key, value) in &map.entries {
+            if self.is_ready_to_render(key) || self.is_ready_to_render(value) {
+              self.display_indent(1)?;
+              write!(self.writer, "[")?;
+              self.display_value(key)?;
+              write!(self.writer, ", ")?;
+              self.indent += 1;
+              self.display_value(value)?;
+              self.indent -= 1;
+              writeln!(self.writer, "],")?;
+            } else {
+              self.follow_up_tasks.push(FollowUpTasks::MapSet {
+                target: *reference,
+                key: key.clone(),
+                value: value.clone(),
+              });
+            }
           }
+          self.display_indent(0)?;
+          write!(self.writer, "])")?;
         }
-        self.display_indent(0)?;
-        write!(self.writer, "])")?;
       }
       HeapValue::Set(set) => {
-        writeln!(self.writer, "new Set([")?;
-        for value in &set.values {
-          if self.is_ready_to_render(value) {
-            self.display_indent(1)?;
-            self.indent += 1;
-            self.display_value(value)?;
-            self.indent -= 1;
-            writeln!(self.writer, ",")?;
-          } else {
-            self.follow_up_tasks.push(FollowUpTasks::SetAdd {
-              target: *reference,
-              value: value.clone(),
-            });
+        if set.values.is_empty() {
+          writeln!(self.writer, "new Set()")?;
+        } else {
+          writeln!(self.writer, "new Set([")?;
+          for value in &set.values {
+            if self.is_ready_to_render(value) {
+              self.display_indent(1)?;
+              self.indent += 1;
+              self.display_value(value)?;
+              self.indent -= 1;
+              writeln!(self.writer, ",")?;
+            } else {
+              self.follow_up_tasks.push(FollowUpTasks::SetAdd {
+                target: *reference,
+                value: value.clone(),
+              });
+            }
           }
+          self.display_indent(0)?;
+          write!(self.writer, "])")?;
         }
-        self.display_indent(0)?;
-        write!(self.writer, "])")?;
       }
       HeapValue::ArrayBuffer(ab) => {
         let info = self.deps.get(reference).unwrap();
@@ -865,7 +876,6 @@ impl<'h, W: Write> Displayer<'h, W> {
     if array_buffer.max_byte_length.is_some() {
       return None;
     }
-    println!("heap {:?}", self.heap);
     for reference in &self.order {
       if info.dependants.contains(reference) {
         let info = self.deps.get(reference).unwrap();
@@ -1000,6 +1010,7 @@ impl<'h, W: Write> Displayer<'h, W> {
       }
     }
 
+    self.display_indent(0)?;
     write!(self.writer, "]")?;
 
     Ok(())

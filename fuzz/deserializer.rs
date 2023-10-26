@@ -12,7 +12,7 @@ fn main() {
     // can not parse the input, the input is not valid and we can skip parsing.
     if res.is_err() {
       let mut isolate = util::Isolate::new();
-      if let Err(err) = isolate.parse_serialized(data) {
+      if let Err(err) = isolate.deserialize(data) {
         println!("v8 failed: {:?}", err);
         return;
       }
@@ -26,6 +26,7 @@ fn main() {
           | ParseErrorKind::SharedObjectNotSupported
           | ParseErrorKind::SharedArrayBufferNotSupported
           | ParseErrorKind::WasmModuleTransferNotSupported
+          | ParseErrorKind::InvalidRegExpFlags(..) // https://bugs.chromium.org/p/v8/issues/detail?id=14412
           | ParseErrorKind::TooDeeplyNested,
         ..
       }) => {

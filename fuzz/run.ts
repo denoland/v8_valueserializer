@@ -8,7 +8,7 @@ Deno.addSignalListener("SIGINT", () => {
   workers.forEach((worker) => worker.kill("SIGINT"));
 });
 
-const VALID_TARGETS = ["deserializer"];
+const VALID_TARGETS = ["deserializer", "display"];
 const target = Deno.args[0];
 if (!VALID_TARGETS.includes(target)) {
   console.error(`invalid target: ${target}`);
@@ -24,7 +24,7 @@ const main = $`cargo afl fuzz -M 00 -i ${path.join("..", target, "in")} -o ${
 } ${path.join("..", "..", "target", "release", "examples", `fuzz_${target}`)}`
   .spawn();
 
-const workerCount = Math.floor(navigator.hardwareConcurrency / 2 - 1);
+const workerCount = Math.floor(navigator.hardwareConcurrency - 3);
 console.log(workerCount);
 
 // deno-lint-ignore no-explicit-any

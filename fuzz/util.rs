@@ -1,4 +1,8 @@
+use v8::Global;
+use v8::Local;
+use v8::Value;
 use v8::ValueDeserializerHelper;
+use v8::ValueSerializerHelper;
 
 static ONCE: std::sync::Once = std::sync::Once::new();
 
@@ -29,7 +33,10 @@ impl Isolate {
     Isolate { isolate, context }
   }
 
-  pub fn parse_serialized(&mut self, serialized: &[u8]) -> Result<(), JsError> {
+  pub fn deserialize(
+    &mut self,
+    serialized: &[u8],
+  ) -> Result<Global<Value>, JsError> {
     let scope = &mut v8::HandleScope::new(&mut self.isolate);
     let context = v8::Local::new(scope, &self.context);
     let scope = &mut v8::ContextScope::new(scope, context);
@@ -47,13 +54,71 @@ impl Isolate {
       return Err(JsError { message });
     };
 
-    let Some(_value) = deserializer.read_value(context) else {
+    let Some(value) = deserializer.read_value(context) else {
       let message = tc.message().unwrap();
       let message = message.get(tc).to_rust_string_lossy(tc);
       return Err(JsError { message });
     };
 
-    Ok(())
+    let global = Global::new(tc, value);
+
+    Ok(global)
+  }
+
+  pub fn eval(&mut self, code: &str) -> Result<Global<Value>, JsError> {
+    let scope = &mut v8::HandleScope::new(&mut self.isolate);
+    let context = v8::Local::new(scope, &self.context);
+    let scope = &mut v8::ContextScope::new(scope, context);
+
+    let tc = &mut v8::TryCatch::new(scope);
+
+    let Some(source) =
+      v8::String::new_from_utf8(tc, code.as_bytes(), v8::NewStringType::Normal)
+    else {
+      let message = tc.message().unwrap();
+      let message = message.get(tc).to_rust_string_lossy(tc);
+      return Err(JsError { message });
+    };
+
+    let Some(script) = v8::Script::compile(tc, source, None) else {
+      let message = tc.message().unwrap();
+      let message = message.get(tc).to_rust_string_lossy(tc);
+      return Err(JsError { message });
+    };
+
+    let Some(value) = script.run(tc) else {
+      let message = tc.message().unwrap();
+      let message = message.get(tc).to_rust_string_lossy(tc);
+      return Err(JsError { message });
+    };
+
+    let global = Global::new(tc, value);
+    Ok(global)
+  }
+
+  pub fn serialize_value(
+    &mut self,
+    value: Global<Value>,
+  ) -> Result<Vec<u8>, JsError> {
+    let scope = &mut v8::HandleScope::new(&mut self.isolate);
+    let context = v8::Local::new(scope, &self.context);
+    let scope = &mut v8::ContextScope::new(scope, context);
+
+    let tc = &mut v8::TryCatch::new(scope);
+    let mut serializer =
+      v8::ValueSerializer::new(tc, Box::new(ValueSerializerImpl));
+
+    let value = Local::new(tc, &value);
+
+    serializer.write_header();
+    let Some(true) = serializer.write_value(context, value) else {
+      let message = tc.message().unwrap();
+      let message = message.get(tc).to_rust_string_lossy(tc);
+      return Err(JsError { message });
+    };
+
+    let buf = serializer.release();
+    Ok(buf)
   }
 }
 
@@ -103,5 +168,18 @@ impl v8::ValueDeserializerImpl for ValueDeserializerImpl {
     let exc = v8::Exception::error(scope, msg);
     scope.throw_exception(exc);
     None
+  }
+}
+
+struct ValueSerializerImpl;
+
+impl v8::ValueSerializerImpl for ValueSerializerImpl {
+  fn throw_data_clone_error<'s>(
+    &mut self,
+    scope: &mut v8::HandleScope<'s>,
+    message: v8::Local<'s, v8::String>,
+  ) {
+    let exc = v8::Exception::error(scope, message);
+    scope.throw_exception(exc);
   }
 }
