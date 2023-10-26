@@ -1,5 +1,6 @@
 /target
 /Cargo.lock
 /fuzz/deserializer
+/fuzz/display
 /lib/*.wasm
 /lib/*.generated.js
