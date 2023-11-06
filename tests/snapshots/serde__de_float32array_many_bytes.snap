@@ -1,0 +1,60 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Float32Array([0, -1.5, 2, -3.5, NaN, -5.5, -Infinity, -0, Infinity])"
+---
+=== VALUE ===
+HeapReference(*1)
+
+=== HEAP ===
+Heap {
+    0: ArrayBuffer {
+        data: [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            192,
+            191,
+            0,
+            0,
+            0,
+            64,
+            0,
+            0,
+            96,
+            192,
+            0,
+            0,
+            192,
+            127,
+            0,
+            0,
+            176,
+            192,
+            0,
+            0,
+            128,
+            255,
+            0,
+            0,
+            0,
+            128,
+            0,
+            0,
+            128,
+            127,
+        ],
+        max_byte_length: None,
+    },
+    1: ArrayBufferView {
+        kind: Float32Array,
+        buffer: *0,
+        byte_offset: 0,
+        length: 9,
+        is_length_tracking: false,
+        is_backed_by_rab: false,
+    },
+}
+

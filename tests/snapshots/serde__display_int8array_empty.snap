@@ -1,0 +1,5 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Int8Array()"
+---
+new Int8Array()

@@ -218,13 +218,15 @@ macro_rules! serde_test {
       } else {
         $code.to_string()
       };
-      let eval_value = isolate.eval(code.as_str()).expect("eval failed");
-      let eval_bytes = isolate
-        .serialize_value(eval_value)
+
+      let input_js_value = isolate.eval(code.as_str()).expect("eval failed");
+      let input_bytes = isolate
+        .serialize_value(input_js_value)
         .expect("serialize_value failed");
-      println!("eval_bytes {:?}", eval_bytes);
+      println!("injs_bytes {:?}", input_bytes);
       let de = v8_valueserializer::ValueDeserializer::default();
-      let (value, heap) = de.read(&eval_bytes).expect("parse_v8 failed");
+
+      let (value, heap) = de.read(&input_bytes).expect("original parse_v8 failed");
       let assert = $crate::util::Assert {
         value,
         heap,
@@ -237,33 +239,71 @@ macro_rules! serde_test {
       });
 
       let ser = v8_valueserializer::ValueSerializer::default();
-      let ser_bytes = ser.finish(&assert.heap, &assert.value).expect("serialize failed");
-      println!("ser__bytes {:?}", ser_bytes);
+      let rs_ser_bytes = ser.finish(&assert.heap, &assert.value).expect("serialize failed");
+      println!("rsserbytes {:?}", rs_ser_bytes);
 
-      let roundtripped_value = isolate
-        .deserialize(&ser_bytes)
-        .expect("deserialize failed");
-      let roundtripped_bytes = isolate
-        .serialize_value(roundtripped_value)
-        .expect("serialize_value failed");
-      println!("rt___bytes {:?}", roundtripped_bytes);
+      let rs_roundtripped_value = isolate
+        .deserialize(&rs_ser_bytes)
+        .expect("rs deserialize failed");
+      let rs_roundtripped_bytes = isolate
+        .serialize_value(rs_roundtripped_value)
+        .expect("rs serialize_value failed");
+      println!("rsrt_bytes {:?}", rs_roundtripped_bytes);
 
       let de = v8_valueserializer::ValueDeserializer::default();
-      let (rt_value, rt_heap) = de.read(&roundtripped_bytes).expect("parse_v8 failed");
+      let (rs_rt_value, rs_rt_heap) = de.read(&rs_roundtripped_bytes).expect("parse_v8 failed");
 
-      if !v8_valueserializer::value_eq((&assert.value, &assert.heap), (&rt_value, &rt_heap)) {
+      if !v8_valueserializer::value_eq((&assert.value, &assert.heap), (&rs_rt_value, &rs_rt_heap)) {
         println!("=== EXPECTED ===");
         println!("{:?}", assert);
 
         let rt_assert = $crate::util::Assert {
-          value: rt_value,
-          heap: rt_heap,
+          value: rs_rt_value,
+          heap: rs_rt_heap,
         };
         println!("=== ROUNDTRIPPED ===");
         println!("{:?}", rt_assert);
 
-        panic!("roundtrip failed");
+        panic!("serialized roundtrip failed");
       }
+
+
+      let display = v8_valueserializer::display(&assert.heap, &assert.value, v8_valueserializer::DisplayOptions {
+        format: v8_valueserializer::DisplayFormat::Repl,
+      });
+      insta::with_settings!({
+        description => format!("=== SOURCE ===\n{}", $code),
+        omit_expression => true,
+      }, {
+        insta::assert_snapshot!(concat!("display_", stringify!($name)), display);
+      });
+
+      let eval = v8_valueserializer::display(&assert.heap, &assert.value, v8_valueserializer::DisplayOptions {
+        format: v8_valueserializer::DisplayFormat::Eval,
+      });
+      let display_rt_js_value = isolate.eval(eval.as_str()).expect("eval failed");
+      let display_rt_bytes = isolate
+        .serialize_value(display_rt_js_value)
+        .expect("serialize_value failed");
+      println!("display_rt_bytes {:?}", display_rt_bytes);
+
+      let de = v8_valueserializer::ValueDeserializer::default();
+      let (display_rt_value, display_rt_heap) = de.read(&display_rt_bytes).expect("parse_v8 failed");
+
+      if !v8_valueserializer::value_eq((&assert.value, &assert.heap), (&display_rt_value, &display_rt_heap)) {
+        println!("=== EXPECTED ===");
+        println!("{:?}", assert);
+
+        let rt_assert = $crate::util::Assert {
+          value: display_rt_value,
+          heap: display_rt_heap,
+        };
+        println!("=== ROUNDTRIPPED ===");
+        println!("{:?}", rt_assert);
+
+        panic!("display roundtrip failed");
+      }
+
     }
   };
 }

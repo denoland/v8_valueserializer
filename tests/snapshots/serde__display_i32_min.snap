@@ -1,0 +1,5 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n-2147483648"
+---
+-2147483648

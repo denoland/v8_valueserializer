@@ -1,0 +1,6 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Uint16Array(new ArrayBuffer(2, { maxByteLength: 10 }))"
+---
+const v0 = new ArrayBuffer(2, { maxByteLength: 10 });
+new Uint16Array(v0)

@@ -1,0 +1,47 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst buf = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).buffer;\nconst foo = { buf };\n[foo, new Uint8Array(buf)];\n"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: DenseArray [
+        HeapReference(
+            *1,
+        ),
+        HeapReference(
+            *3,
+        ),
+    ] {},
+    1: Object {
+        OneByte("buf"): HeapReference(
+            *2,
+        ),
+    },
+    2: ArrayBuffer {
+        data: [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+        ],
+        max_byte_length: None,
+    },
+    3: ArrayBufferView {
+        kind: Uint8Array,
+        buffer: *2,
+        byte_offset: 0,
+        length: 10,
+        is_length_tracking: false,
+        is_backed_by_rab: false,
+    },
+}
+

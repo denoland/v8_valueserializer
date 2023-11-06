@@ -1,0 +1,8 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n[1, \"asd\"]"
+---
+[
+  1,
+  "asd",
+]

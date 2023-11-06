@@ -1,0 +1,5 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew ArrayBuffer(1)"
+---
+new ArrayBuffer(1)

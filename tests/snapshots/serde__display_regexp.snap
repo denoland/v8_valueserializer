@@ -1,0 +1,5 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n/asd/gi"
+---
+new RegExp("asd", "gi")

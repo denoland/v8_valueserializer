@@ -1,0 +1,6 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Uint8Array(new ArrayBuffer(2, { maxByteLength: 10 })).subarray(0, 1)"
+---
+const v0 = new ArrayBuffer(2, { maxByteLength: 10 });
+new Uint8Array(v0, 0, 1)

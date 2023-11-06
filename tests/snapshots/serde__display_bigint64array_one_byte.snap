@@ -1,0 +1,7 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew BigInt64Array([-1n])"
+---
+new BigInt64Array([
+  -0x01n,
+])

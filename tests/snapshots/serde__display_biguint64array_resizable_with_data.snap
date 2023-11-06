@@ -1,0 +1,10 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst a = new BigUint64Array(new ArrayBuffer(16, { maxByteLength: 24 })); a.set([1n, 2n]); a"
+---
+const v0 = new ArrayBuffer(16, { maxByteLength: 24 });
+new Uint8Array(v0).set([
+  0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+]);
+new BigUint64Array(v0)

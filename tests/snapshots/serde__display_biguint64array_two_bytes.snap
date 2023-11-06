@@ -1,0 +1,7 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew BigUint64Array([1n, 2n])"
+---
+new BigUint64Array([
+  0x01n, 0x02n,
+])

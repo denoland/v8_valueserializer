@@ -1,0 +1,5 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Int16Array(4)"
+---
+new Int16Array(4)

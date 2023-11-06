@@ -1,0 +1,11 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Map([[{ a: true }, { b: true }]])"
+---
+new Map([
+  [{
+    "a": true,
+  }, {
+    "b": true,
+  }],
+])

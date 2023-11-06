@@ -1,0 +1,10 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n\nconst arr = [\"asd\", 1];\narr.foo = \"bar\";\narr\n"
+---
+const v0 = [
+  "asd",
+  1,
+];
+v0["foo"] = "bar";
+v0

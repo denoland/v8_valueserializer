@@ -1,0 +1,6 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew BigUint64Array(new ArrayBuffer(16, { maxByteLength: 24 })).subarray(0, 1)"
+---
+const v0 = new ArrayBuffer(16, { maxByteLength: 24 });
+new BigUint64Array(v0, 0, 1)

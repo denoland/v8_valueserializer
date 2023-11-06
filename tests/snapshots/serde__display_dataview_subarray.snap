@@ -1,0 +1,7 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew DataView(new Uint8Array([1, 2]).buffer, 1, 1)"
+---
+new DataView(new Uint8Array([
+  0x01, 0x02,
+]).buffer, 1)

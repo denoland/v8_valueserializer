@@ -1,0 +1,21 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew ArrayBuffer(5)"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: ArrayBuffer {
+        data: [
+            0,
+            0,
+            0,
+            0,
+            0,
+        ],
+        max_byte_length: None,
+    },
+}
+

@@ -302,9 +302,9 @@ impl<'h, W: Write> Displayer<'h, W> {
                   continue;
                 };
                 this.display_indent(0)?;
-                write!(this.writer, "{}[", ident)?;
-                this.display_property_key(key)?;
-                write!(this.writer, "] = ")?;
+                write!(this.writer, "{}", ident)?;
+                this.display_property_access(key)?;
+                write!(this.writer, " = ")?;
                 this.display_value(value)?;
                 writeln!(this.writer, ";")?;
               }
@@ -634,11 +634,11 @@ impl<'h, W: Write> Displayer<'h, W> {
           writeln!(self.writer, "new Map([")?;
           for (key, value) in &map.entries {
             if self.is_ready_to_render(key) || self.is_ready_to_render(value) {
-              self.display_indent(1)?;
+              self.indent += 1;
+              self.display_indent(0)?;
               write!(self.writer, "[")?;
               self.display_value(key)?;
               write!(self.writer, ", ")?;
-              self.indent += 1;
               self.display_value(value)?;
               self.indent -= 1;
               writeln!(self.writer, "],")?;
@@ -661,8 +661,8 @@ impl<'h, W: Write> Displayer<'h, W> {
           writeln!(self.writer, "new Set([")?;
           for value in &set.values {
             if self.is_ready_to_render(value) {
-              self.display_indent(1)?;
               self.indent += 1;
+              self.display_indent(0)?;
               self.display_value(value)?;
               self.indent -= 1;
               writeln!(self.writer, ",")?;
@@ -729,6 +729,7 @@ impl<'h, W: Write> Displayer<'h, W> {
       }
       HeapValue::ArrayBufferView(view) => {
         let buffer_info = self.deps.get(&view.buffer).unwrap();
+        dbg!(buffer_info);
         let HeapValue::ArrayBuffer(buffer) = view.buffer.open(self.heap) else {
           unreachable!()
         };
@@ -741,6 +742,9 @@ impl<'h, W: Write> Displayer<'h, W> {
         {
           assert!(!view.is_backed_by_rab);
           if backing_view_reference == *reference {
+            assert_ne!(backing_view.kind, ArrayBufferViewKind::DataView);
+            assert!(view.byte_offset == 0);
+            assert!(view.length == backing_view.length);
             let kind = backing_view.kind;
             write!(self.writer, "new {}(", kind)?;
             if buffer.data.is_empty() {
@@ -752,8 +756,28 @@ impl<'h, W: Write> Displayer<'h, W> {
               self.display_array_buffer_data_array(kind, buffer)?;
             }
             write!(self.writer, ")")?;
+          } else if view.kind == backing_view.kind
+            && view.kind != ArrayBufferViewKind::DataView
+          {
+            // If the array buffer view is backed by another array buffer view
+            // of the same kind, we can just create a new view referencing the
+            // same underlying buffer using .subarray().
+            let ident = self.idents.get(&backing_view_reference).unwrap();
+            let start = view.byte_offset / view.kind.byte_width();
+            let end = start + view.length;
+            let needs_end = end != backing_view.length;
+            write!(self.writer, "{}.subarray(", ident)?;
+            if start != 0 || needs_end {
+              write!(self.writer, ", {}", start)?;
+              if needs_end {
+                write!(self.writer, ", {}", end)?;
+              }
+            }
+            write!(self.writer, ")")?;
           } else {
-            // todo: in some cases we can do the even nicer backing_view.subarray()
+            // If the array buffer view is backed by another array buffer view
+            // of a different kind, we create a new ArrayBufferView of the type
+            // we're rendering now with the right view.
             let ident = self.idents.get(&backing_view_reference).unwrap();
             write!(self.writer, "new {}({}.buffer", view.kind, ident)?;
             let length =
@@ -766,17 +790,53 @@ impl<'h, W: Write> Displayer<'h, W> {
             }
             write!(self.writer, ")")?;
           }
-        } else {
-          let ident = self.idents.get(reference).unwrap();
-          write!(self.writer, "new {}({}.buffer", view.kind, ident)?;
+        } else if let Some(ident) = self.idents.get(&view.buffer) {
+          // If the array buffer is not inlined, we create a new ArrayBufferView
+          // referencing the underlying buffer by ident.
+          write!(self.writer, "new {}({}", view.kind, ident)?;
           let length =
             (view.length * view.kind.byte_width()) + view.byte_offset;
           let needs_explicit_length = (view.is_backed_by_rab
             && !view.is_length_tracking)
-            || length != buffer.byte_length();
+            || (length != buffer.byte_length() && !view.is_length_tracking);
           if view.byte_offset != 0 || needs_explicit_length {
-            write!(self.writer, ", {}", view.byte_offset)?;
+            let offset = view.byte_offset / view.kind.byte_width();
+            write!(self.writer, ", {}", offset)?;
             if needs_explicit_length {
+              write!(self.writer, ", {}", view.length)?;
+            }
+          }
+          write!(self.writer, ")")?;
+        } else if view.kind != ArrayBufferViewKind::DataView {
+          assert!(!view.is_backed_by_rab);
+          // If the array buffer can be inlined, we create a new ArrayBufferView
+          // of the same kind as the view were rendering to now, and then call
+          // .subarray() on it to get the correct view.
+          write!(self.writer, "new {}(", view.kind)?;
+          if buffer.data.is_empty() {
+            // no arguments
+          } else if buffer.data.iter().all(|b| *b == 0) {
+            let length = buffer.data.len() / view.kind.byte_width() as usize;
+            write!(self.writer, "{}", length)?;
+          } else {
+            self.display_array_buffer_data_array(view.kind, buffer)?;
+          }
+          let offset = view.byte_offset / view.kind.byte_width();
+          write!(
+            self.writer,
+            ").subarray({}, {})",
+            offset,
+            offset + view.length
+          )?;
+        } else {
+          assert!(!view.is_backed_by_rab);
+          write!(self.writer, "new DataView(")?;
+          self.display_heap_value(view.buffer.open(self.heap), &view.buffer)?;
+          if view.byte_offset != 0
+            || view.length + view.byte_offset != buffer.byte_length()
+          {
+            write!(self.writer, ", {}", view.byte_offset)?;
+            if view.length + view.byte_offset != buffer.byte_length() {
               write!(self.writer, ", {}", view.length)?;
             }
           }
@@ -856,6 +916,25 @@ impl<'h, W: Write> Displayer<'h, W> {
     }
   }
 
+  fn display_property_access(
+    &mut self,
+    key: &crate::value::PropertyKey,
+  ) -> std::fmt::Result {
+    match key {
+      crate::value::PropertyKey::String(string) => {
+        write!(self.writer, "[")?;
+        self.display_string(string)?;
+        write!(self.writer, "]")
+      }
+      crate::value::PropertyKey::I32(num) => write!(self.writer, "[{}]", num),
+      crate::value::PropertyKey::U32(num) => write!(self.writer, "[{}]", num),
+      crate::value::PropertyKey::Double(num) => {
+        write!(self.writer, "[")?;
+        self.display_number(*num)?;
+        write!(self.writer, "]")
+      }
+    }
+  }
   /// Return the HeapReference to an array buffer view that is dependant on this
   /// object if any exist. This is used to determine whether the array buffer
   /// can be rendered as part of an array buffer view, or whether it needs to be
@@ -880,7 +959,8 @@ impl<'h, W: Write> Displayer<'h, W> {
         if let HeapValue::ArrayBufferView(view) = reference.open(self.heap) {
           assert!(!view.is_backed_by_rab);
           assert!(!view.is_length_tracking);
-          if view.byte_offset == 0
+          if view.kind != ArrayBufferViewKind::DataView
+            && view.byte_offset == 0
             && (view.length * view.kind.byte_width())
               == array_buffer.byte_length()
           {

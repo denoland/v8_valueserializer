@@ -1,0 +1,7 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Set([1])"
+---
+new Set([
+  1,
+])

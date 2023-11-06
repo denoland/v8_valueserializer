@@ -1,0 +1,10 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n[1, { a: true }]"
+---
+[
+  1,
+  {
+    "a": true,
+  },
+]

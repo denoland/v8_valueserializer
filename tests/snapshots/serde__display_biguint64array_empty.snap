@@ -1,0 +1,5 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew BigUint64Array()"
+---
+new BigUint64Array()

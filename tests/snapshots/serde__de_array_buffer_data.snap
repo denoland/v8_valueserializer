@@ -1,0 +1,40 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst a = new Float64Array([1, 2, 3]); a.buffer"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: ArrayBuffer {
+        data: [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            240,
+            63,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            64,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            8,
+            64,
+        ],
+        max_byte_length: None,
+    },
+}
+

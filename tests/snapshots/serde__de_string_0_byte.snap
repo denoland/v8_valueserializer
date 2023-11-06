@@ -1,0 +1,10 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n\"è÷\\u{0}\""
+---
+=== VALUE ===
+String(OneByte("\u{e8}\u{f7}\u{80}\u{0}"))
+
+=== HEAP ===
+Heap {}
+

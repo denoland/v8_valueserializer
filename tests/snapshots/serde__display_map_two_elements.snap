@@ -1,0 +1,8 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Map([[\"a\", 1], [\"b\", 2]])"
+---
+new Map([
+  ["a", 1],
+  ["b", 2],
+])

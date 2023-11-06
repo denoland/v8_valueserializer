@@ -1,0 +1,6 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Float32Array(new ArrayBuffer(4, { maxByteLength: 12 }))"
+---
+const v0 = new ArrayBuffer(4, { maxByteLength: 12 });
+new Float32Array(v0)

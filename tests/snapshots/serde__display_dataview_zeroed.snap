@@ -1,0 +1,5 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew DataView(new ArrayBuffer(8))"
+---
+new DataView(new ArrayBuffer(8))

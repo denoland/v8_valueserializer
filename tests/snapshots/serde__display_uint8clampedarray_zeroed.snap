@@ -1,0 +1,5 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Uint8ClampedArray(8)"
+---
+new Uint8ClampedArray(8)

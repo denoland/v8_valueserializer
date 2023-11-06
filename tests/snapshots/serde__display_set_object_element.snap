@@ -1,0 +1,9 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Set([{ a: true }])"
+---
+new Set([
+  {
+    "a": true,
+  },
+])

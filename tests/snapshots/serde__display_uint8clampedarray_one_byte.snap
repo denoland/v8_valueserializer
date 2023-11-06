@@ -1,0 +1,7 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Uint8ClampedArray([1])"
+---
+new Uint8ClampedArray([
+  0x01,
+])

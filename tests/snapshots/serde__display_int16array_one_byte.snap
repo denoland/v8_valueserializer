@@ -1,0 +1,7 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Int16Array([-1])"
+---
+new Int16Array([
+  -0x01,
+])

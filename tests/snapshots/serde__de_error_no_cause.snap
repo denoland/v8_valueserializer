@@ -1,0 +1,21 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Error(\"foo\")"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Error {
+        name: Error,
+        message: Some(
+            OneByte("foo"),
+        ),
+        stack: Some(
+            OneByte("Error: foo\n    at <anonymous>:1:1"),
+        ),
+        cause: None,
+    },
+}
+

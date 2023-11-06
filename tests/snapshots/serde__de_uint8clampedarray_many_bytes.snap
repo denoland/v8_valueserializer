@@ -1,0 +1,33 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Uint8ClampedArray([0, 1, 2, 3, 4, 5, 6, 7, 8])"
+---
+=== VALUE ===
+HeapReference(*1)
+
+=== HEAP ===
+Heap {
+    0: ArrayBuffer {
+        data: [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+        ],
+        max_byte_length: None,
+    },
+    1: ArrayBufferView {
+        kind: Uint8ClampedArray,
+        buffer: *0,
+        byte_offset: 0,
+        length: 9,
+        is_length_tracking: false,
+        is_backed_by_rab: false,
+    },
+}
+

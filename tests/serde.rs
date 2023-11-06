@@ -36,7 +36,8 @@ serde_test!(bigint_u128_max r#"340282366920938463463374607431768211455n"#);
 serde_test!(string_empty r#"''"#);
 serde_test!(string_one_byte r#"'asd'"#);
 serde_test!(string_two_byte r#"'asd 🌎'"#);
-// TODO: test utf8 string
+serde_test!(string_0_byte r#""è÷\u{0}""#);
+serde_test!(string_unpaired_surrogate r#"'foo \ud800 bar'"#);
 
 // boolean primitive wrapper object
 serde_test!(boolean_primitive_true r#"new Boolean(true)"#);
@@ -144,75 +145,159 @@ serde_test!(resizable_arraybuffer_empty r#"new ArrayBuffer(2, { maxByteLength: 1
 
 // uint8array
 serde_test!(uint8array_empty r#"new Uint8Array()"#);
+serde_test!(uint8array_zeroed r#"new Uint8Array(8)"#);
+serde_test!(uint8array_zeroed2 r#"new Uint8Array([0, 0, 0])"#);
 serde_test!(uint8array_one_byte r#"new Uint8Array([1])"#);
 serde_test!(uint8array_two_bytes r#"new Uint8Array([1, 2])"#);
+serde_test!(uint8array_many_bytes r#"new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8])"#);
 serde_test!(uint8array_subarray r#"new Uint8Array([1, 2]).subarray(1, 2)"#);
 serde_test!(uint8array_resizable r#"new Uint8Array(new ArrayBuffer(2, { maxByteLength: 10 }))"#);
 serde_test!(uint8array_resizable_non_tracking r#"new Uint8Array(new ArrayBuffer(2, { maxByteLength: 10 })).subarray(0, 1)"#);
+serde_test!(uint8array_resizable_with_data r#"const a = new Uint8Array(new ArrayBuffer(2, { maxByteLength: 10 })); a.set([1, 2]); a"#);
 
 // uint8clampedarray
 serde_test!(uint8clampedarray_empty r#"new Uint8ClampedArray()"#);
+serde_test!(uint8clampedarray_zeroed r#"new Uint8ClampedArray(8)"#);
+serde_test!(uint8clampedarray_zeroed2 r#"new Uint8ClampedArray([0, 0, 0])"#);
 serde_test!(uint8clampedarray_one_byte r#"new Uint8ClampedArray([1])"#);
 serde_test!(uint8clampedarray_two_bytes r#"new Uint8ClampedArray([1, 2])"#);
+serde_test!(uint8clampedarray_many_bytes r#"new Uint8ClampedArray([0, 1, 2, 3, 4, 5, 6, 7, 8])"#);
 serde_test!(uint8clampedarray_subarray r#"new Uint8ClampedArray([1, 2]).subarray(1, 2)"#);
 serde_test!(uint8clampedarray_resizable r#"new Uint8ClampedArray(new ArrayBuffer(2, { maxByteLength: 10 }))"#);
 serde_test!(uint8clampedarray_resizable_non_tracking r#"new Uint8ClampedArray(new ArrayBuffer(2, { maxByteLength: 10 })).subarray(0, 1)"#);
+serde_test!(uint8clampedarray_resizable_with_data r#"const a = new Uint8ClampedArray(new ArrayBuffer(2, { maxByteLength: 10 })); a.set([1, 2]); a"#);
 
 // int8array
 serde_test!(int8array_empty r#"new Int8Array()"#);
+serde_test!(int8array_zeroed r#"new Int8Array(8)"#);
+serde_test!(int8array_zeroed2 r#"new Int8Array([0, 0, 0])"#);
 serde_test!(int8array_one_byte r#"new Int8Array([-1])"#);
 serde_test!(int8array_two_bytes r#"new Int8Array([1, -2])"#);
+serde_test!(int8array_many_bytes r#"new Int8Array([0, -1, 2, -3, 4, -5, 6, -7, 8])"#);
 serde_test!(int8array_subarray r#"new Int8Array([1, 2]).subarray(1, 2)"#);
 serde_test!(int8array_resizable r#"new Int8Array(new ArrayBuffer(2, { maxByteLength: 10 }))"#);
 serde_test!(int8array_resizable_non_tracking r#"new Int8Array(new ArrayBuffer(2, { maxByteLength: 10 })).subarray(0, 1)"#);
+serde_test!(int8array_resizable_with_data r#"const a = new Int8Array(new ArrayBuffer(2, { maxByteLength: 10 })); a.set([1, -2]); a"#);
 
 // uint16array
 serde_test!(uint16array_empty r#"new Uint16Array()"#);
+serde_test!(uint16array_zeroed r#"new Uint16Array(4)"#);
+serde_test!(uint16array_zeroed2 r#"new Uint16Array([0, 0, 0])"#);
 serde_test!(uint16array_one_byte r#"new Uint16Array([1])"#);
 serde_test!(uint16array_two_bytes r#"new Uint16Array([1, 2])"#);
+serde_test!(uint16array_many_bytes r#"new Uint16Array([0, 1, 2, 3, 4, 5, 6, 7, 8])"#);
 serde_test!(uint16array_subarray r#"new Uint16Array([1, 2]).subarray(1, 2)"#);
 serde_test!(uint16array_resizable r#"new Uint16Array(new ArrayBuffer(2, { maxByteLength: 10 }))"#);
 serde_test!(uint16array_resizable_non_tracking r#"new Uint16Array(new ArrayBuffer(4, { maxByteLength: 10 })).subarray(0, 1)"#);
+serde_test!(uint16array_resizable_with_data r#"const a = new Uint16Array(new ArrayBuffer(4, { maxByteLength: 10 })); a.set([1, 2]); a"#);
 
 // int16array
 serde_test!(int16array_empty r#"new Int16Array()"#);
+serde_test!(int16array_zeroed r#"new Int16Array(4)"#);
+serde_test!(int16array_zeroed2 r#"new Int16Array([0, 0, 0])"#);
 serde_test!(int16array_one_byte r#"new Int16Array([-1])"#);
 serde_test!(int16array_two_bytes r#"new Int16Array([1, -2])"#);
+serde_test!(int16array_many_bytes r#"new Int16Array([0, -1, 2, -3, 4, -5, 6, -7, 8])"#);
 serde_test!(int16array_subarray r#"new Int16Array([1, 2]).subarray(1, 2)"#);
 serde_test!(int16array_resizable r#"new Int16Array(new ArrayBuffer(2, { maxByteLength: 10 }))"#);
 serde_test!(int16array_resizable_non_tracking r#"new Uint16Array(new ArrayBuffer(4, { maxByteLength: 10 })).subarray(0, 1)"#);
+serde_test!(int16array_resizable_with_data r#"const a = new Int16Array(new ArrayBuffer(4, { maxByteLength: 10 })); a.set([1, -2]); a"#);
 
 // uint32array
 serde_test!(uint32array_empty r#"new Uint32Array()"#);
+serde_test!(uint32array_zeroed r#"new Uint32Array(2)"#);
+serde_test!(uint32array_zeroed2 r#"new Uint32Array([0, 0, 0])"#);
 serde_test!(uint32array_one_byte r#"new Uint32Array([1])"#);
 serde_test!(uint32array_two_bytes r#"new Uint32Array([1, 2])"#);
+serde_test!(uint32array_many_bytes r#"new Uint32Array([0, 1, 2, 3, 4, 5, 6, 7, 8])"#);
 serde_test!(uint32array_subarray r#"new Uint32Array([1, 2]).subarray(1, 2)"#);
 serde_test!(uint32array_resizable r#"new Uint32Array(new ArrayBuffer(4, { maxByteLength: 12 }))"#);
 serde_test!(uint32array_resizable_non_tracking r#"new Uint32Array(new ArrayBuffer(8, { maxByteLength: 12 })).subarray(0, 1)"#);
+serde_test!(uint32array_resizable_with_data r#"const a = new Uint32Array(new ArrayBuffer(8, { maxByteLength: 12 })); a.set([1, 2]); a"#);
 
 // int32array
 serde_test!(int32array_empty r#"new Int32Array()"#);
+serde_test!(int32array_zeroed r#"new Int32Array(2)"#);
+serde_test!(int32array_zeroed2 r#"new Int32Array([0, 0, 0])"#);
 serde_test!(int32array_one_byte r#"new Int32Array([-1])"#);
 serde_test!(int32array_two_bytes r#"new Int32Array([1, -2])"#);
+serde_test!(int32array_many_bytes r#"new Int32Array([0, -1, 2, -3, 4, -5, 6, -7, 8])"#);
 serde_test!(int32array_subarray r#"new Int32Array([1, 2]).subarray(1, 2)"#);
 serde_test!(int32array_resizable r#"new Int32Array(new ArrayBuffer(4, { maxByteLength: 12 }))"#);
 serde_test!(int32array_resizable_non_tracking r#"new Int32Array(new ArrayBuffer(8, { maxByteLength: 12 })).subarray(0, 1)"#);
+serde_test!(int32array_resizable_with_data r#"const a = new Int32Array(new ArrayBuffer(8, { maxByteLength: 12 })); a.set([1, -2]); a"#);
 
 // biguint64array
 serde_test!(biguint64array_empty r#"new BigUint64Array()"#);
+serde_test!(biguint64array_zeroed r#"new BigUint64Array(1)"#);
+serde_test!(biguint64array_zeroed2 r#"new BigUint64Array([0n, 0n, 0n])"#);
 serde_test!(biguint64array_one_byte r#"new BigUint64Array([1n])"#);
 serde_test!(biguint64array_two_bytes r#"new BigUint64Array([1n, 2n])"#);
+serde_test!(biguint64array_many_bytes r#"new BigUint64Array([0n, 1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n])"#);
 serde_test!(biguint64array_subarray r#"new BigUint64Array([1n, 2n]).subarray(1, 2)"#);
 serde_test!(biguint64array_resizable r#"new BigUint64Array(new ArrayBuffer(8, { maxByteLength: 16 }))"#);
 serde_test!(biguint64array_resizable_non_tracking r#"new BigUint64Array(new ArrayBuffer(16, { maxByteLength: 24 })).subarray(0, 1)"#);
+serde_test!(biguint64array_resizable_with_data r#"const a = new BigUint64Array(new ArrayBuffer(16, { maxByteLength: 24 })); a.set([1n, 2n]); a"#);
 
 // bigint64array
 serde_test!(bigint64array_empty r#"new BigInt64Array()"#);
+serde_test!(bigint64array_zeroed r#"new BigInt64Array(1)"#);
+serde_test!(bigint64array_zeroed2 r#"new BigInt64Array([0n, 0n, 0n])"#);
 serde_test!(bigint64array_one_byte r#"new BigInt64Array([-1n])"#);
 serde_test!(bigint64array_two_bytes r#"new BigInt64Array([1n, -2n])"#);
+serde_test!(bigint64array_many_bytes r#"new BigInt64Array([0n, -1n, 2n, -3n, 4n, -5n, 6n, -7n, 8n])"#);
 serde_test!(bigint64array_subarray r#"new BigInt64Array([1n, 2n]).subarray(1, 2)"#);
 serde_test!(bigint64array_resizable r#"new BigInt64Array(new ArrayBuffer(8, { maxByteLength: 16 }))"#);
 serde_test!(bigint64array_resizable_non_tracking r#"new BigInt64Array(new ArrayBuffer(16, { maxByteLength: 24 })).subarray(0, 1)"#);
+serde_test!(bigint64array_resizable_with_data r#"const a = new BigInt64Array(new ArrayBuffer(16, { maxByteLength: 24 })); a.set([1n, -2n]); a"#);
+
+// float32array
+serde_test!(float32array_empty r#"new Float32Array()"#);
+serde_test!(float32array_zeroed r#"new Float32Array(2)"#);
+serde_test!(float32array_zeroed2 r#"new Float32Array([0, 0, 0])"#);
+serde_test!(float32array_one_byte r#"new Float32Array([1.0])"#);
+serde_test!(float32array_two_bytes r#"new Float32Array([1.0, -2.5])"#);
+serde_test!(float32array_many_bytes r#"new Float32Array([0, -1.5, 2, -3.5, NaN, -5.5, -Infinity, -0, Infinity])"#);
+serde_test!(float32array_subarray r#"new Float32Array([1, 2]).subarray(1, 2)"#);
+serde_test!(float32array_resizable r#"new Float32Array(new ArrayBuffer(4, { maxByteLength: 12 }))"#);
+serde_test!(float32array_resizable_non_tracking r#"new Float32Array(new ArrayBuffer(8, { maxByteLength: 12 })).subarray(0, 1)"#);
+serde_test!(float32array_resizable_with_data r#"const a = new Float32Array(new ArrayBuffer(8, { maxByteLength: 12 })); a.set([1.0, -2.5]); a"#);
+
+// float64array
+serde_test!(float64array_empty r#"new Float64Array()"#);
+serde_test!(float64array_zeroed r#"new Float64Array(1)"#);
+serde_test!(float64array_zeroed2 r#"new Float64Array([0, 0, 0])"#);
+serde_test!(float64array_one_byte r#"new Float64Array([1.0])"#);
+serde_test!(float64array_two_bytes r#"new Float64Array([1.0, -2.5])"#);
+serde_test!(float64array_many_bytes r#"new Float64Array([0, -1.5, 2, -3.5, NaN, -5.5, -Infinity, -0, Infinity])"#);
+serde_test!(float64array_subarray r#"new Float64Array([1, 2]).subarray(1, 2)"#);
+serde_test!(float64array_resizable r#"new Float64Array(new ArrayBuffer(8, { maxByteLength: 16 }))"#);
+serde_test!(float64array_resizable_non_tracking r#"new Float64Array(new ArrayBuffer(16, { maxByteLength: 24 })).subarray(0, 1)"#);
+serde_test!(float64array_resizable_with_data r#"const a = new Float64Array(new ArrayBuffer(16, { maxByteLength: 24 })); a.set([1.0, -2.5]); a"#);
+
+// dataview
+serde_test!(dataview_empty r#"new DataView(new ArrayBuffer(0))"#);
+serde_test!(dataview_zeroed r#"new DataView(new ArrayBuffer(8))"#);
+serde_test!(dataview_zeroed2 r#"new DataView(new Uint8Array([0, 0, 0]).buffer)"#);
+serde_test!(dataview_one_byte r#"new DataView(new Uint8Array([1]).buffer)"#);
+serde_test!(dataview_two_bytes r#"new DataView(new Uint8Array([1, 2]).buffer)"#);
+serde_test!(dataview_many_bytes r#"new DataView(new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8]).buffer)"#);
+serde_test!(dataview_subarray r#"new DataView(new Uint8Array([1, 2]).buffer, 1, 1)"#);
+serde_test!(dataview_resizable r#"new DataView(new ArrayBuffer(8, { maxByteLength: 16 }))"#);
+serde_test!(dataview_resizable_non_tracking r#"new DataView(new ArrayBuffer(2, { maxByteLength: 10 }), 0, 1)"#);
+serde_test!(dataview_resizable_with_data r#"const a = new DataView(new ArrayBuffer(2, { maxByteLength: 10 })); a.setUint8(0, 1); a"#);
+
+// typed arrays
+serde_test!(typed_array_inline r#"const a = new Float64Array(6); [a, new Uint8Array(a.buffer).subarray(3, 4)]"#);
+
+// array buffer
+serde_test!(array_buffer_empty r#"new ArrayBuffer()"#);
+serde_test!(array_buffer_zeroed r#"new ArrayBuffer(5)"#);
+serde_test!(array_buffer_data r#"const a = new Float64Array([1, 2, 3]); a.buffer"#);
+serde_test!(indirect_array_buffer r#"const buf = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).buffer;
+const foo = { buf };
+[foo, new Uint8Array(buf)];
+"#);
 
 // circular reference
 serde_test!(circular_reference r#"const foo = {}; foo.foo = foo; foo"#);
@@ -220,3 +305,6 @@ serde_test!(circular_reference_multi r#"const a = { b: {} }; a.b.a = a; a"#);
 
 // error
 serde_test!(error r#"new Error("foo", { cause: 1 })"#);
+serde_test!(error_no_cause r#"new Error("foo")"#);
+// V8 bug: https://bugs.chromium.org/p/v8/issues/detail?id=14433
+// serde_test!(error_cause_self r#"const err = new Error("foo"); err.cause = err; err"#);

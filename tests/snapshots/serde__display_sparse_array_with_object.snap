@@ -1,0 +1,9 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n[/* hole */, {a: 2}]"
+---
+const v1 = new Array(2);
+v1[1] = {
+  "a": 2,
+};
+v1

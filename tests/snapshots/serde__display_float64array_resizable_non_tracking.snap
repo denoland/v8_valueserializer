@@ -1,0 +1,6 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Float64Array(new ArrayBuffer(16, { maxByteLength: 24 })).subarray(0, 1)"
+---
+const v0 = new ArrayBuffer(16, { maxByteLength: 24 });
+new Float64Array(v0, 0, 1)

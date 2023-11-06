@@ -1,0 +1,7 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n{\"a\": 1}"
+---
+({
+  "a": 1,
+})

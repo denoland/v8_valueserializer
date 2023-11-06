@@ -1,0 +1,28 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst a = new Int8Array(new ArrayBuffer(2, { maxByteLength: 10 })); a.set([1, -2]); a"
+---
+=== VALUE ===
+HeapReference(*1)
+
+=== HEAP ===
+Heap {
+    0: ArrayBuffer {
+        data: [
+            1,
+            254,
+        ],
+        max_byte_length: Some(
+            10,
+        ),
+    },
+    1: ArrayBufferView {
+        kind: Int8Array,
+        buffer: *0,
+        byte_offset: 0,
+        length: 0,
+        is_length_tracking: true,
+        is_backed_by_rab: true,
+    },
+}
+

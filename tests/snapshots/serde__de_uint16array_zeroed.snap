@@ -1,0 +1,32 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Uint16Array(4)"
+---
+=== VALUE ===
+HeapReference(*1)
+
+=== HEAP ===
+Heap {
+    0: ArrayBuffer {
+        data: [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        ],
+        max_byte_length: None,
+    },
+    1: ArrayBufferView {
+        kind: Uint16Array,
+        buffer: *0,
+        byte_offset: 0,
+        length: 4,
+        is_length_tracking: false,
+        is_backed_by_rab: false,
+    },
+}
+

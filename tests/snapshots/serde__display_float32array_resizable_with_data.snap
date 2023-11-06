@@ -1,0 +1,9 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst a = new Float32Array(new ArrayBuffer(8, { maxByteLength: 12 })); a.set([1.0, -2.5]); a"
+---
+const v0 = new ArrayBuffer(8, { maxByteLength: 12 });
+new Uint8Array(v0).set([
+  0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x20, 0xc0,
+]);
+new Float32Array(v0)

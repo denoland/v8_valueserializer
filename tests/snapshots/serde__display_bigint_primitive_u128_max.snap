@@ -1,0 +1,5 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nObject(340282366920938463463374607431768211455n)"
+---
+new Object(340282366920938463463374607431768211455n)

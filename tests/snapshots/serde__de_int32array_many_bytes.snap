@@ -1,0 +1,60 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Int32Array([0, -1, 2, -3, 4, -5, 6, -7, 8])"
+---
+=== VALUE ===
+HeapReference(*1)
+
+=== HEAP ===
+Heap {
+    0: ArrayBuffer {
+        data: [
+            0,
+            0,
+            0,
+            0,
+            255,
+            255,
+            255,
+            255,
+            2,
+            0,
+            0,
+            0,
+            253,
+            255,
+            255,
+            255,
+            4,
+            0,
+            0,
+            0,
+            251,
+            255,
+            255,
+            255,
+            6,
+            0,
+            0,
+            0,
+            249,
+            255,
+            255,
+            255,
+            8,
+            0,
+            0,
+            0,
+        ],
+        max_byte_length: None,
+    },
+    1: ArrayBufferView {
+        kind: Int32Array,
+        buffer: *0,
+        byte_offset: 0,
+        length: 9,
+        is_length_tracking: false,
+        is_backed_by_rab: false,
+    },
+}
+

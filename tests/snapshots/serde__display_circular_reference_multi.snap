@@ -1,0 +1,13 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst a = { b: {} }; a.b.a = a; a"
+---
+const v0 = {
+  "a": undefined /* circular */
+,
+};
+const v1 = {
+  "b": v0,
+};
+v0["a"] = v1;
+v1

@@ -1,0 +1,7 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Uint16Array([1])"
+---
+new Uint16Array([
+  0x01,
+])

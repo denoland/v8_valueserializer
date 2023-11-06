@@ -1,0 +1,5 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Date(-8640000000000000)"
+---
+new Date(-8640000000000000)

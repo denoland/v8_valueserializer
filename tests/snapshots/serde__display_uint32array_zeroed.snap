@@ -1,0 +1,5 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Uint32Array(2)"
+---
+new Uint32Array(2)

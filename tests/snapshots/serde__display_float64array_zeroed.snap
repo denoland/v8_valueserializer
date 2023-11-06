@@ -1,0 +1,5 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Float64Array(1)"
+---
+new Float64Array(1)

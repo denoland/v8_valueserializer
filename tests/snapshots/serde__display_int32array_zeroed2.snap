@@ -1,0 +1,5 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Int32Array([0, 0, 0])"
+---
+new Int32Array(3)

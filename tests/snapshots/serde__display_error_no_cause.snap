@@ -1,0 +1,7 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Error(\"foo\")"
+---
+const v0 = new Error("foo");
+v0["stack"] = "Error: foo\u{a}    at <anonymous>:1:1";
+v0

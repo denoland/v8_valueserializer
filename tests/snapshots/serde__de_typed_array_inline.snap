@@ -1,0 +1,88 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst a = new Float64Array(6); [a, new Uint8Array(a.buffer).subarray(3, 4)]"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: DenseArray [
+        HeapReference(
+            *2,
+        ),
+        HeapReference(
+            *3,
+        ),
+    ] {},
+    1: ArrayBuffer {
+        data: [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        ],
+        max_byte_length: None,
+    },
+    2: ArrayBufferView {
+        kind: Float64Array,
+        buffer: *1,
+        byte_offset: 0,
+        length: 6,
+        is_length_tracking: false,
+        is_backed_by_rab: false,
+    },
+    3: ArrayBufferView {
+        kind: Uint8Array,
+        buffer: *1,
+        byte_offset: 3,
+        length: 1,
+        is_length_tracking: false,
+        is_backed_by_rab: false,
+    },
+}
+

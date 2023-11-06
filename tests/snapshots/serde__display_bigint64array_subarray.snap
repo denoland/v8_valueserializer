@@ -1,0 +1,7 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew BigInt64Array([1n, 2n]).subarray(1, 2)"
+---
+new BigInt64Array([
+  0x01n, 0x02n,
+]).subarray(1, 2)

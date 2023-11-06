@@ -1,0 +1,8 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Float32Array([0, -1.5, 2, -3.5, NaN, -5.5, -Infinity, -0, Infinity])"
+---
+new Float32Array([
+  0, -1.5, 2, -3.5, NaN, -5.5, -Infinity, -0,
+  Infinity,
+])
