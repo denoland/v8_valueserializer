@@ -1,0 +1,17 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n/asd/gi"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: RegExp {
+        pattern: OneByte("asd"),
+        flags: RegExpFlags(
+            GLOBAL | IGNORE_CASE,
+        ),
+    },
+}
+

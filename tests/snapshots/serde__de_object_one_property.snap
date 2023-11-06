@@ -1,0 +1,16 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n{\"a\": 1}"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Object {
+        OneByte("a"): I32(
+            1,
+        ),
+    },
+}
+

@@ -1,0 +1,23 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Map([[1, { b: true }]])"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Map {
+        I32(
+            1,
+        ): HeapReference(
+            *1,
+        ),
+    },
+    1: Object {
+        OneByte("b"): Bool(
+            true,
+        ),
+    },
+}
+

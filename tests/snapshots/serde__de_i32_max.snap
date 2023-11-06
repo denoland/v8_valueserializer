@@ -1,0 +1,10 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n2147483647"
+---
+=== VALUE ===
+I32(2147483647)
+
+=== HEAP ===
+Heap {}
+

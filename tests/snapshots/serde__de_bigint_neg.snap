@@ -1,0 +1,10 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n-1n"
+---
+=== VALUE ===
+BigInt(-1)
+
+=== HEAP ===
+Heap {}
+

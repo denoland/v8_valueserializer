@@ -1,0 +1,23 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Map([[\"a\", 1], [\"b\", 2]])"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Map {
+        String(
+            OneByte("a"),
+        ): I32(
+            1,
+        ),
+        String(
+            OneByte("b"),
+        ): I32(
+            2,
+        ),
+    },
+}
+

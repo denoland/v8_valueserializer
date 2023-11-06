@@ -1,0 +1,16 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n{\"foo🗄️\": 6}"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Object {
+        TwoByte("foo🗄️"): I32(
+            6,
+        ),
+    },
+}
+

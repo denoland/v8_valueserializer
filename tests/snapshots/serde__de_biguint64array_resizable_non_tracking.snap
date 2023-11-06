@@ -1,0 +1,42 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew BigUint64Array(new ArrayBuffer(16, { maxByteLength: 24 })).subarray(0, 1)"
+---
+=== VALUE ===
+HeapReference(*1)
+
+=== HEAP ===
+Heap {
+    0: ArrayBuffer {
+        data: [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        ],
+        max_byte_length: Some(
+            24,
+        ),
+    },
+    1: ArrayBufferView {
+        kind: BigUint64Array,
+        buffer: *0,
+        byte_offset: 0,
+        length: 1,
+        is_length_tracking: false,
+        is_backed_by_rab: true,
+    },
+}
+

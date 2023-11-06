@@ -1,0 +1,12 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Array(1)"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: SparseArray(1) {},
+}
+

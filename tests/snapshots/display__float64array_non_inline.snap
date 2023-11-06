@@ -1,9 +1,0 @@
----
-source: tests/display.rs
-description: "=== SOURCE ===\nconst a = new Float64Array(6); [a, new Uint8Array(a.buffer).subarray(3, 4)]"
----
-const v0 = new Float64Array(6);
-[
-  v0,
-  new Uint8Array(v0.buffer, 3, 1),
-]

@@ -576,7 +576,7 @@ impl<'h, W: Write> Displayer<'h, W> {
       }
       HeapValue::SparseArray(arr) => {
         write!(self.writer, "new Array({})", arr.length)?;
-        if arr.properties.len() > 0 {
+        if !arr.properties.is_empty() {
           for (key, value) in &arr.properties {
             self
               .follow_up_tasks

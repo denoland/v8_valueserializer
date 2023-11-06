@@ -1,5 +1,0 @@
----
-source: tests/display.rs
-description: "=== SOURCE ===\n\"è÷\\u{0}\""
----
-"è÷\u{0}"

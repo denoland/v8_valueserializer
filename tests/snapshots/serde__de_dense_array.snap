@@ -1,0 +1,19 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n[1, 2]"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: DenseArray [
+        I32(
+            1,
+        ),
+        I32(
+            2,
+        ),
+    ] {},
+}
+

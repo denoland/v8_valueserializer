@@ -1,0 +1,12 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Set()"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Set {},
+}
+

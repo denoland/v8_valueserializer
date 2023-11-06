@@ -1,0 +1,14 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Boolean(false)"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: BooleanObject(
+        false,
+    ),
+}
+

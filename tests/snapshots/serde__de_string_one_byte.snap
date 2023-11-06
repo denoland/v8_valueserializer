@@ -1,0 +1,10 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n'asd'"
+---
+=== VALUE ===
+String(OneByte("asd"))
+
+=== HEAP ===
+Heap {}
+

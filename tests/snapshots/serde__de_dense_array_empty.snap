@@ -1,0 +1,12 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n[]"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: DenseArray [] {},
+}
+

@@ -1,0 +1,10 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nundefined"
+---
+=== VALUE ===
+Undefined
+
+=== HEAP ===
+Heap {}
+

@@ -1,0 +1,10 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n5e-324"
+---
+=== VALUE ===
+Double(5e-324)
+
+=== HEAP ===
+Heap {}
+

@@ -1,0 +1,10 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\ntrue"
+---
+=== VALUE ===
+Bool(true)
+
+=== HEAP ===
+Heap {}
+

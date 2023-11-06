@@ -25,12 +25,14 @@ impl<'a, 'b, T> HeapEqContext<'a, 'b, T> {
   }
 }
 
-trait HeapEq: Sized {
-  fn eq(left: &HeapEqContext<Self>, right: &HeapEqContext<Self>) -> bool;
+trait HeapEq<Right = Self>: Sized {
+  fn eq(left: &HeapEqContext<Self>, right: &HeapEqContext<Right>) -> bool;
 }
 
-impl<'a, 'b, T: HeapEq> PartialEq for HeapEqContext<'a, 'b, T> {
-  fn eq(&self, other: &Self) -> bool {
+impl<'a, 'b, T: HeapEq<Right>, Right> PartialEq<HeapEqContext<'a, 'b, Right>>
+  for HeapEqContext<'a, 'b, T>
+{
+  fn eq(&self, other: &HeapEqContext<'a, 'b, Right>) -> bool {
     T::eq(self, other)
   }
 }
@@ -289,6 +291,15 @@ impl TwoByteString {
     &self.0
   }
 
+  pub fn as_u8_bytes(&self) -> &[u8] {
+    // SAFETY: A [u16] slice is always aligned to 2 bytes, which is a multiple
+    // of 1 byte (the alignment of u8 slices). A single u16 is two u8s, so the
+    // length of the u8 slice is twice the length of the u16 slice.
+    unsafe {
+      std::slice::from_raw_parts(self.0.as_ptr() as *const u8, self.0.len() * 2)
+    }
+  }
+
   /// Turn the TwoByteString into the underlying Vec<u8>.
   pub fn into_bytes(self) -> Vec<u16> {
     self.0
@@ -395,6 +406,12 @@ impl HeapEq for HeapValue {
       }
       (HeapValue::DenseArray(a), HeapValue::DenseArray(b)) => {
         left.next(a) == right.next(b)
+      }
+      (HeapValue::SparseArray(a), HeapValue::DenseArray(b)) => {
+        left.next(a) == right.next(b)
+      }
+      (HeapValue::DenseArray(a), HeapValue::SparseArray(b)) => {
+        right.next(b) == left.next(a)
       }
       (HeapValue::Map(a), HeapValue::Map(b)) => left.next(a) == right.next(b),
       (HeapValue::Set(a), HeapValue::Set(b)) => left.next(a) == right.next(b),
@@ -597,6 +614,48 @@ impl HeapEq for SparseArray {
   }
 }
 
+impl HeapEq<DenseArray> for SparseArray {
+  fn eq(left: &HeapEqContext<Self>, right: &HeapEqContext<DenseArray>) -> bool {
+    if left.value.length as usize != right.value.elements.len()
+      || left.value.properties.len()
+        != (right.value.elements.len() + right.value.properties.len())
+    {
+      return false;
+    }
+
+    for (key, value) in &left.value.properties {
+      if let Some((_, value)) =
+        right.value.properties.iter().find(|(k, _)| k == key)
+      {
+        if left.next(value) != right.next(value) {
+          return false;
+        }
+      } else {
+        let key = match key {
+          PropertyKey::I32(key) => Cow::Owned(key.to_string()),
+          PropertyKey::U32(key) => Cow::Owned(key.to_string()),
+          PropertyKey::Double(key) => Cow::Owned(key.to_string()),
+          PropertyKey::String(str) => str.to_string(),
+        };
+        let key = match key.parse::<u32>() {
+          Ok(key) => key,
+          Err(_) => return false,
+        };
+        if let Some(Some(right_value)) = &right.value.elements.get(key as usize)
+        {
+          if left.next(value) != right.next(right_value) {
+            return false;
+          }
+        } else {
+          return false;
+        }
+      }
+    }
+
+    true
+  }
+}
+
 impl std::fmt::Debug for SparseArray {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(f, "SparseArray({}) ", self.length)?;
@@ -664,7 +723,7 @@ impl Display for RegExpFlags {
 pub struct Date {
   // The time since the epoch in milliseconds. This is a double, but it is
   // always a whole number or NaN, and it is never infinite.
-  time_since_epoch: f64,
+  pub(crate) time_since_epoch: f64,
 }
 
 impl PartialEq for Date {
@@ -790,6 +849,8 @@ impl std::fmt::Debug for Set {
 pub struct ArrayBuffer {
   /// The raw bytes of the buffer. We ensure that this is always aligned to 8
   /// bytes, so that we can cast it to a [[u64] / [i64]] when appropriate.
+  /// Additionally we ensure that the length never exceeds 2^32 bytes, so that
+  /// we can cast the length to a u32 when appropriate.
   pub(crate) data: Box<[u8]>,
   /// The maximum byte length of the buffer. If this is None, resizability is
   /// disabled. If this is Some(n), then the buffer can be resized to a maximum
@@ -1187,5 +1248,10 @@ impl HeapReference {
   pub fn open<'a>(&self, heap: &'a Heap) -> &'a HeapValue {
     assert!(self.heap_id == heap.heap_id);
     &heap.values[self.index]
+  }
+
+  pub fn try_open<'a>(&self, heap: &'a Heap) -> Option<&'a HeapValue> {
+    assert!(self.heap_id == heap.heap_id);
+    heap.values.get(self.index)
   }
 }

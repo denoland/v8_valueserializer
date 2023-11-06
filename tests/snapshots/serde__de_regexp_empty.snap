@@ -1,0 +1,17 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew RegExp(\"(?:)\")"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: RegExp {
+        pattern: OneByte("(?:)"),
+        flags: RegExpFlags(
+            0x0,
+        ),
+    },
+}
+

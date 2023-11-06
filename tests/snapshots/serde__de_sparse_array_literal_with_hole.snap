@@ -1,0 +1,22 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n[1, 2, /* hole */, 4]"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: SparseArray(4) {
+        0: I32(
+            1,
+        ),
+        1: I32(
+            2,
+        ),
+        3: I32(
+            4,
+        ),
+    },
+}
+

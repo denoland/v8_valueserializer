@@ -1,0 +1,10 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nNaN"
+---
+=== VALUE ===
+Double(NaN)
+
+=== HEAP ===
+Heap {}
+

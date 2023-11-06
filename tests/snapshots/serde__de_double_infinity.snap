@@ -1,0 +1,10 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nInfinity"
+---
+=== VALUE ===
+Double(inf)
+
+=== HEAP ===
+Heap {}
+

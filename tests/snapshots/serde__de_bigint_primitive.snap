@@ -1,0 +1,14 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nObject(1n)"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: BigIntObject(
+        1,
+    ),
+}
+
