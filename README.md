@@ -8,6 +8,10 @@ Additionally this library can generate an eval'able JavaScript representation of
 the serialized value that can be used for user display, manipulation, or
 debugging.
 
+In the future this library will also provide a way to serialize and deserialize
+values to and from JavaScript objects or a structured intermediate in JavaScript
+via WebAssembly.
+
 ## Development
 
 To build:
