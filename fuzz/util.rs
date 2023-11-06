@@ -33,6 +33,7 @@ impl Isolate {
     Isolate { isolate, context }
   }
 
+  #[allow(dead_code)]
   pub fn deserialize(
     &mut self,
     serialized: &[u8],
@@ -65,6 +66,7 @@ impl Isolate {
     Ok(global)
   }
 
+  #[allow(dead_code)]
   pub fn eval(&mut self, code: &str) -> Result<Global<Value>, JsError> {
     let scope = &mut v8::HandleScope::new(&mut self.isolate);
     let context = v8::Local::new(scope, &self.context);
@@ -96,6 +98,7 @@ impl Isolate {
     Ok(global)
   }
 
+  #[allow(dead_code)]
   pub fn serialize_value(
     &mut self,
     value: Global<Value>,

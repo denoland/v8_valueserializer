@@ -1,0 +1,28 @@
+[workspace]
+members = ["."]
+
+[package]
+name = "v8_valueserializer_fuzz"
+version = "0.1.0"
+edition = "2021"
+
+[[example]]
+name = "fuzz_deserializer"
+path = "deserializer.rs"
+
+[[example]]
+name = "fuzz_deserializer_repro"
+path = "deserializer_repro.rs"
+
+[[example]]
+name = "fuzz_display"
+path = "display.rs"
+
+[[example]]
+name = "fuzz_display_repro"
+path = "display_repro.rs"
+
+[dependencies]
+v8_valueserializer = { path = ".." }
+v8 = "0.79.2"
+afl = "0.14"

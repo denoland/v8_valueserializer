@@ -7,3 +7,11 @@ format.
 Additionally this library can generate an eval'able JavaScript representation of
 the serialized value that can be used for user display, manipulation, or
 debugging.
+
+## Development
+
+To build:
+
+```
+$ cargo build
+```

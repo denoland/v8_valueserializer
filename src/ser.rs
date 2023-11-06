@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::mem::size_of;
 
 use num_bigint::BigInt;
 use thiserror::Error;
@@ -122,7 +121,7 @@ impl ValueSerializer {
     // encoded as 0, -1 as 1, 1 as 2, -2 as 3, and so on).
     // See also https://developers.google.com/protocol-buffers/docs/encoding
     self.write_varint(
-      ((value << 1) ^ (value >> ((8 * size_of::<i32>()) - 1))) as u32,
+      ((value << 1) ^ (value >> (i32::BITS as usize - 1))) as u32,
     );
   }
 
@@ -205,7 +204,7 @@ impl ValueSerializer {
           .len()
           .try_into()
           .map_err(|_| SerializationError::StringTooLong)?;
-        if self.data.len() + 1 + bytes_needed_for_varint(length) & 0x1 == 1 {
+        if (self.data.len() + 1 + bytes_needed_for_varint(length)) & 0x1 == 1 {
           self.write_tag(SerializationTag::Padding);
         }
         self.write_tag(SerializationTag::TwoByteString);
@@ -221,7 +220,7 @@ impl ValueSerializer {
     heap: &Heap,
     reference: HeapReference,
   ) -> Result<(), SerializationError> {
-    let Some(value) = reference.try_open(&heap) else {
+    let Some(value) = reference.try_open(heap) else {
       return Err(SerializationError::DanglingHeapReference);
     };
     match value {

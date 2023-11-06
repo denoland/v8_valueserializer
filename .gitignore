@@ -1,5 +1,7 @@
 /target
 /Cargo.lock
+/fuzz/target
+/fuzz/Cargo.lock
 /fuzz/deserializer
 /fuzz/display
 /lib/*.wasm

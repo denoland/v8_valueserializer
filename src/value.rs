@@ -3,6 +3,7 @@ use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::fmt::Display;
+use std::fmt::Write;
 use std::rc::Rc;
 
 use num_bigint::BigInt;
@@ -99,7 +100,7 @@ impl PartialEq for StringValue {
       StringValue::Wtf8(str) => {
         // Safety: The memory layout of Wtf8 and [u8] is the same.
         let wtf8: &wtf8::Wtf8 = unsafe { std::mem::transmute(str.as_bytes()) };
-        wtf8.to_ill_formed_utf16().into_iter().collect()
+        wtf8.to_ill_formed_utf16().collect()
       }
       StringValue::OneByte(str) => str.as_str().encode_utf16().collect(),
       StringValue::TwoByte(str) => str.0.clone(),
@@ -108,7 +109,7 @@ impl PartialEq for StringValue {
       StringValue::Wtf8(wtf8) => {
         // Safety: The memory layout of Wtf8 and [u8] is the same.
         let wtf8: &wtf8::Wtf8 = unsafe { std::mem::transmute(wtf8.as_bytes()) };
-        wtf8.to_ill_formed_utf16().into_iter().collect()
+        wtf8.to_ill_formed_utf16().collect()
       }
       StringValue::OneByte(str) => str.as_str().encode_utf16().collect(),
       StringValue::TwoByte(bytes) => bytes.0.clone(),
@@ -279,6 +280,16 @@ impl OneByteString {
 #[derive(Debug, Clone)]
 pub struct TwoByteString(Vec<u16>);
 
+impl std::fmt::Display for TwoByteString {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    for res in std::char::decode_utf16(self.0.iter().copied()) {
+      let char = res.unwrap_or(char::REPLACEMENT_CHARACTER);
+      f.write_char(char)?;
+    }
+    Ok(())
+  }
+}
+
 impl TwoByteString {
   /// Create a new TwoByteString from a Vec<u16>. This operation is infallible,
   /// as the bytes are not checked for validity.
@@ -305,12 +316,6 @@ impl TwoByteString {
     self.0
   }
 
-  /// Turn this TwoByteString into a String. If the bytes are not valid UTF-16,
-  /// this operation will turn them into a String lossily.
-  pub fn to_string(&self) -> String {
-    String::from_utf16_lossy(&self.0)
-  }
-
   /// Display the contents of the string in UTF-8, escaping any bytes that are
   /// not valid code points with a Unicode escape sequence (e.g. `\u{1234}`).
   /// Also escapes all ASCII control characters, and the characters `\` and `"`.
@@ -318,8 +323,7 @@ impl TwoByteString {
     &self,
     writer: &mut impl std::fmt::Write,
   ) -> std::fmt::Result {
-    for res in std::char::decode_utf16(self.as_bytes().into_iter().map(|f| *f))
-    {
+    for res in std::char::decode_utf16(self.as_bytes().iter().copied()) {
       match res {
         Ok(char) => match char {
           '"' | '\\' => write!(writer, "\\{}", char)?,
@@ -747,8 +751,8 @@ fn double_to_integer(x: f64) -> f64 {
 impl Date {
   pub fn new(time_since_epoch: f64) -> Date {
     const MAX_TIME_IN_MS: f64 = (864_000_000i64 * 10_000_000i64) as f64;
-    if time_since_epoch >= -MAX_TIME_IN_MS && time_since_epoch <= MAX_TIME_IN_MS
-    {
+
+    if (-MAX_TIME_IN_MS..=MAX_TIME_IN_MS).contains(&time_since_epoch) {
       let time_since_epoch = double_to_integer(time_since_epoch);
       Date { time_since_epoch }
     } else {

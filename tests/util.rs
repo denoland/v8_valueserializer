@@ -23,8 +23,8 @@ pub struct Isolate {
   context: v8::Global<v8::Context>,
 }
 
-impl Isolate {
-  pub fn new() -> Isolate {
+impl Default for Isolate {
+  fn default() -> Isolate {
     ONCE.call_once(init_v8);
     let mut isolate = v8::Isolate::new(Default::default());
     let mut scope = v8::HandleScope::new(&mut isolate);
@@ -33,7 +33,10 @@ impl Isolate {
     drop(scope);
     Isolate { isolate, context }
   }
+}
 
+impl Isolate {
+  #[allow(dead_code)]
   pub fn deserialize(
     &mut self,
     serialized: &[u8],
@@ -66,6 +69,7 @@ impl Isolate {
     Ok(global)
   }
 
+  #[allow(dead_code)]
   pub fn eval(&mut self, code: &str) -> Result<Global<Value>, JsError> {
     let scope = &mut v8::HandleScope::new(&mut self.isolate);
     let context = v8::Local::new(scope, &self.context);
@@ -97,6 +101,7 @@ impl Isolate {
     Ok(global)
   }
 
+  #[allow(dead_code)]
   pub fn serialize_value(
     &mut self,
     value: Global<Value>,
@@ -207,7 +212,7 @@ macro_rules! serde_test {
   ($name:ident $code:expr) => {
     #[test]
     fn $name() {
-      let mut isolate = $crate::util::Isolate::new();
+      let mut isolate = $crate::util::Isolate::default();
       let code = if $code.starts_with("{") {
         format!("({})", $code)
       } else {
@@ -268,7 +273,7 @@ macro_rules! display_test {
   ($name:ident $code:expr) => {
     #[test]
     fn $name() {
-      let mut isolate = $crate::util::Isolate::new();
+      let mut isolate = $crate::util::Isolate::default();
       let code = if $code.starts_with("{") {
         format!("({})", $code)
       } else {

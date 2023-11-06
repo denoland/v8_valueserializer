@@ -167,8 +167,8 @@ impl<'h, W: Write> Displayer<'h, W> {
           }
         }
         HeapValue::DenseArray(arr) => {
-          for value in &arr.elements {
-            if let Some(Value::HeapReference(referred)) = value {
+          for value in arr.elements.iter().flatten() {
+            if let Value::HeapReference(referred) = value {
               visit_and_record!(heap, deps, referrer, *referred);
             }
           }
@@ -286,7 +286,7 @@ impl<'h, W: Write> Displayer<'h, W> {
                 value,
                 requires_ordering,
               } => {
-                let Some(ident) = this.idents.get(&target).cloned() else {
+                let Some(ident) = this.idents.get(target).cloned() else {
                   this.follow_up_tasks.push(task);
                   continue;
                 };
@@ -303,54 +303,54 @@ impl<'h, W: Write> Displayer<'h, W> {
                 };
                 this.display_indent(0)?;
                 write!(this.writer, "{}[", ident)?;
-                this.display_property_key(&key)?;
+                this.display_property_key(key)?;
                 write!(this.writer, "] = ")?;
-                this.display_value(&value)?;
+                this.display_value(value)?;
                 writeln!(this.writer, ";")?;
               }
               FollowUpTasks::MapSet { target, key, value } => {
-                let Some(ident) = this.idents.get(&target).cloned() else {
+                let Some(ident) = this.idents.get(target).cloned() else {
                   this.follow_up_tasks.push(task);
                   continue;
                 };
-                if !this.is_ready_to_render(&key)
-                  || !this.is_ready_to_render(&value)
+                if !this.is_ready_to_render(key)
+                  || !this.is_ready_to_render(value)
                 {
                   this.follow_up_tasks.push(task);
                   continue;
                 }
                 this.display_indent(0)?;
                 write!(this.writer, "{}.set(", ident)?;
-                this.display_value(&key)?;
+                this.display_value(key)?;
                 write!(this.writer, ", ")?;
-                this.display_value(&value)?;
+                this.display_value(value)?;
                 writeln!(this.writer, ");")?;
               }
               FollowUpTasks::SetAdd { target, value } => {
-                let Some(ident) = this.idents.get(&target).cloned() else {
+                let Some(ident) = this.idents.get(target).cloned() else {
                   this.follow_up_tasks.push(task);
                   continue;
                 };
-                if !this.is_ready_to_render(&value) {
+                if !this.is_ready_to_render(value) {
                   this.follow_up_tasks.push(task);
                   continue;
                 }
                 this.display_indent(0)?;
                 write!(this.writer, "{}.add(", ident)?;
-                this.display_value(&value)?;
+                this.display_value(value)?;
                 writeln!(this.writer, ");")?;
               }
               FollowUpTasks::ArrayBufferSet { target, kind } => {
-                let Some(ident) = this.idents.get(&target) else {
+                let Some(ident) = this.idents.get(target) else {
                   this.follow_up_tasks.push(task);
                   continue;
                 };
-                if !this.is_ready_to_render(&value) {
+                if !this.is_ready_to_render(value) {
                   this.follow_up_tasks.push(task);
                   continue;
                 }
                 write!(this.writer, "new {}({}).set(", kind, ident)?;
-                let HeapValue::ArrayBuffer(buffer) = target.open(&this.heap)
+                let HeapValue::ArrayBuffer(buffer) = target.open(this.heap)
                 else {
                   unreachable!()
                 };
@@ -438,7 +438,7 @@ impl<'h, W: Write> Displayer<'h, W> {
         if let Some(ident) = self.idents.get(reference) {
           write!(self.writer, "{}", ident)
         } else {
-          let heap_value = reference.open(&self.heap);
+          let heap_value = reference.open(self.heap);
           self.display_heap_value(heap_value, reference)
         }
       }
@@ -716,16 +716,14 @@ impl<'h, W: Write> Displayer<'h, W> {
                 kind,
               });
             }
+          } else if ab.byte_length() == 0 {
+            write!(self.writer, "new ArrayBuffer()")?;
+          } else if ab.data.iter().all(|b| *b == 0) {
+            write!(self.writer, "new ArrayBuffer({})", ab.byte_length())?;
           } else {
-            if ab.byte_length() == 0 {
-              write!(self.writer, "new ArrayBuffer()")?;
-            } else if ab.data.iter().all(|b| *b == 0) {
-              write!(self.writer, "new ArrayBuffer({})", ab.byte_length())?;
-            } else {
-              write!(self.writer, "new {}(", kind)?;
-              self.display_array_buffer_data_array(kind, ab)?;
-              write!(self.writer, ").buffer")?;
-            }
+            write!(self.writer, "new {}(", kind)?;
+            self.display_array_buffer_data_array(kind, ab)?;
+            write!(self.writer, ").buffer")?;
           }
         }
       }
@@ -759,7 +757,7 @@ impl<'h, W: Write> Displayer<'h, W> {
             let ident = self.idents.get(&backing_view_reference).unwrap();
             write!(self.writer, "new {}({}.buffer", view.kind, ident)?;
             let length =
-              (view.length * view.kind.byte_width() as u32) + view.byte_offset;
+              (view.length * view.kind.byte_width()) + view.byte_offset;
             if view.byte_offset != 0 || length != buffer.byte_length() {
               write!(self.writer, ", {}", view.byte_offset)?;
               if length != buffer.byte_length() {
@@ -769,10 +767,10 @@ impl<'h, W: Write> Displayer<'h, W> {
             write!(self.writer, ")")?;
           }
         } else {
-          let ident = self.idents.get(&reference).unwrap();
+          let ident = self.idents.get(reference).unwrap();
           write!(self.writer, "new {}({}.buffer", view.kind, ident)?;
           let length =
-            (view.length * view.kind.byte_width() as u32) + view.byte_offset;
+            (view.length * view.kind.byte_width()) + view.byte_offset;
           let needs_explicit_length = (view.is_backed_by_rab
             && !view.is_length_tracking)
             || length != buffer.byte_length();
@@ -788,7 +786,7 @@ impl<'h, W: Write> Displayer<'h, W> {
       HeapValue::Error(err) => {
         write!(self.writer, "new {}(", err.name)?;
         if let Some(message) = &err.message {
-          self.display_string(&message)?;
+          self.display_string(message)?;
         }
         if let Some(cause) = &err.cause {
           if self.is_ready_to_render(cause) {
@@ -1019,7 +1017,7 @@ impl<'h, W: Write> Displayer<'h, W> {
 
 pub fn display(heap: &Heap, value: &Value, opts: DisplayOptions) -> String {
   let mut result = String::new();
-  Displayer::display(&heap, &value, opts, &mut result).unwrap();
+  Displayer::display(heap, value, opts, &mut result).unwrap();
   result
 }
 

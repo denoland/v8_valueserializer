@@ -132,8 +132,8 @@ impl ValueDeserializer {
     let mut input = Input { bytes, position: 0 };
     input.expect_tag(SerializationTag::Version)?;
     let version = input.read_varint()?;
-    if version < MINIMUM_WIRE_FORMAT_VERSION
-      || version > MAXIMUM_WIRE_FORMAT_VERSION
+    if !(MINIMUM_WIRE_FORMAT_VERSION..=MAXIMUM_WIRE_FORMAT_VERSION)
+      .contains(&version)
     {
       return Err(input.err(ParseErrorKind::InvalidWireFormatVersion(version)));
     }
@@ -191,7 +191,7 @@ fn read_object_internal(
   if tag == SerializationTag::VerifyObjectCount as u8 {
     // Read the count and ignore it.
     let _ = input.read_varint()?;
-    return read_object(de, input, heap);
+    read_object(de, input, heap)
   } else if tag == SerializationTag::Undefined as u8 {
     Ok(Value::Undefined)
   } else if tag == SerializationTag::Null as u8 {
@@ -611,7 +611,7 @@ fn read_js_array_buffer(
     if max_byte_length_value < byte_length {
       return Err(input.err(
         ParseErrorKind::InvalidResizableArrayBufferMaxLength {
-          byte_length: byte_length,
+          byte_length,
           max_byte_length: max_byte_length_value,
         },
       ));
@@ -892,7 +892,7 @@ impl<'a> Input<'a> {
       let byte = self.read_byte()?;
       value |= ((byte & 0b01111111) as u32) << (i * 7);
       i += 1;
-      if byte & 0b10000000 == 0 || i >= size_of::<u32>() + 1 {
+      if byte & 0b10000000 == 0 || i > size_of::<u32>() {
         break;
       }
     }
@@ -904,9 +904,9 @@ impl<'a> Input<'a> {
     let mut i = 0;
     loop {
       let byte = self.read_byte()?;
-      value |= ((byte & 0b01111111) as u8) << (i * 7);
+      value |= (byte & 0b01111111) << (i * 7);
       i += 1;
-      if byte & 0b10000000 == 0 || i >= size_of::<u8>() + 1 {
+      if byte & 0b10000000 == 0 || i > size_of::<u8>() {
         break;
       }
     }
