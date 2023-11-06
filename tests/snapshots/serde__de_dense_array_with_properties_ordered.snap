@@ -1,0 +1,42 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n\nconst c = { };\nconst b = { c };\nconst a = { b };\nconst arr = [\"asd\", 1, b];\narr.x = 1;\narr.c = c;\nc.arr = arr;\narr.foo = \"bar\";\nc\n"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Object {
+        OneByte("arr"): HeapReference(
+            *1,
+        ),
+    },
+    1: DenseArray [
+        String(
+            OneByte("asd"),
+        ),
+        I32(
+            1,
+        ),
+        HeapReference(
+            *2,
+        ),
+    ] {
+        OneByte("x"): I32(
+            1,
+        ),
+        OneByte("c"): HeapReference(
+            *0,
+        ),
+        OneByte("foo"): String(
+            OneByte("bar"),
+        ),
+    },
+    2: Object {
+        OneByte("c"): HeapReference(
+            *0,
+        ),
+    },
+}
+

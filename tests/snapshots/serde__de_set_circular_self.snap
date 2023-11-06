@@ -1,0 +1,16 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst s = new Set(); s.add(s); s"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Set {
+        HeapReference(
+            *0,
+        ),
+    },
+}
+

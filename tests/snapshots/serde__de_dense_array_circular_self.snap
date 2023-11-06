@@ -1,0 +1,16 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst arr = [undefined]; arr[0] = arr; arr"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: DenseArray [
+        HeapReference(
+            *0,
+        ),
+    ] {},
+}
+

@@ -1,0 +1,17 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst err = new Error(); delete err.stack; err"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Error {
+        name: Error,
+        message: None,
+        stack: None,
+        cause: None,
+    },
+}
+

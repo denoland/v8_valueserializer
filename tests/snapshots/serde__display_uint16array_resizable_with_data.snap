@@ -3,7 +3,7 @@ source: tests/serde.rs
 description: "=== SOURCE ===\nconst a = new Uint16Array(new ArrayBuffer(4, { maxByteLength: 10 })); a.set([1, 2]); a"
 ---
 const v0 = new ArrayBuffer(4, { maxByteLength: 10 });
-new Uint8Array(v0).set([
-  0x01, 0x00, 0x02, 0x00,
+new Uint16Array(v0).set([
+  0x01, 0x02,
 ]);
 new Uint16Array(v0)

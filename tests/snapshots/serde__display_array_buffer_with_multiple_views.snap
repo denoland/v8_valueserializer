@@ -1,0 +1,11 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst buf = new Uint16Array([1, 2, 3]); [new Uint16Array(buf.buffer, 2, 1), new Int16Array(buf.buffer, 4, 1)]"
+---
+const v0 = new Uint16Array([
+  0x01, 0x02, 0x03,
+]).buffer;
+[
+  new Uint16Array(v0, 2, 1),
+  new Int16Array(v0, 4),
+]

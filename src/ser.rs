@@ -252,7 +252,6 @@ impl ValueSerializer {
       }
       std::collections::hash_map::Entry::Vacant(entry) => {
         entry.insert(next_id);
-        next_id
       }
     };
 

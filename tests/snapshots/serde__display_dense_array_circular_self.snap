@@ -1,0 +1,9 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst arr = [undefined]; arr[0] = arr; arr"
+---
+const v0 = [
+  undefined /* circular */,
+];
+v0[0] = v0;
+v0

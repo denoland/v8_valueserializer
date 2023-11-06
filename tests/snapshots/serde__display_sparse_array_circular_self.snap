@@ -1,0 +1,7 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst arr = new Array(2); arr[0] = arr; arr"
+---
+const v0 = new Array(2);
+v0[0] = v0;
+v0

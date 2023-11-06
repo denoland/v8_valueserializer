@@ -1,0 +1,7 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew TypeError(\"foo\")"
+---
+const v0 = new TypeError("foo");
+v0["stack"] = "TypeError: foo\u{a}    at <anonymous>:1:1";
+v0

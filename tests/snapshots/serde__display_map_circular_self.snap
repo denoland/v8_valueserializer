@@ -1,0 +1,8 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst m = new Map(); m.set(1, m); m"
+---
+const v0 = new Map([
+]);
+v0.set(1, v0);
+v0

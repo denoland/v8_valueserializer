@@ -267,7 +267,6 @@ macro_rules! serde_test {
         panic!("serialized roundtrip failed");
       }
 
-
       let display = v8_valueserializer::display(&assert.heap, &assert.value, v8_valueserializer::DisplayOptions {
         format: v8_valueserializer::DisplayFormat::Repl,
       });

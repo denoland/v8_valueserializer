@@ -1,0 +1,7 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew URIError(\"foo\")"
+---
+const v0 = new URIError("foo");
+v0["stack"] = "URIError: foo\u{a}    at <anonymous>:1:1";
+v0

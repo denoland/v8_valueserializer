@@ -1,0 +1,7 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst err = new Error(); delete err.stack; err"
+---
+const v0 = new Error();
+v0["stack"] = undefined;
+v0

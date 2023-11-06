@@ -122,11 +122,9 @@ impl<'h, W: Write> Displayer<'h, W> {
 
     fn visit(heap: &Heap, deps: &mut DependencyInfo, referrer: HeapReference) {
       match deps.objects.entry(referrer) {
-        Entry::Occupied(mut entry) => {
+        Entry::Occupied(_) => {
           if deps.stack.contains(&referrer) {
-            // We've found a cycle. Mark both the referrer and the referred as
-            // requiring a binding.
-            entry.get_mut().requires_binding = true;
+            // We've found a cycle. Mark the referrer as requiring a binding.
             if let Some(referrer) = deps.stack.last() {
               let referrer = deps.objects.get_mut(referrer).unwrap();
               referrer.requires_binding = true;
@@ -558,7 +556,7 @@ impl<'h, W: Write> Displayer<'h, W> {
           if self.is_ready_to_render(value) {
             self.display_value(value)?;
           } else {
-            writeln!(self.writer, "undefined /* circular */")?;
+            write!(self.writer, "undefined /* circular */")?;
             self
               .follow_up_tasks
               .push(FollowUpTasks::PropertyAssignment {
@@ -633,7 +631,7 @@ impl<'h, W: Write> Displayer<'h, W> {
         } else {
           writeln!(self.writer, "new Map([")?;
           for (key, value) in &map.entries {
-            if self.is_ready_to_render(key) || self.is_ready_to_render(value) {
+            if self.is_ready_to_render(key) && self.is_ready_to_render(value) {
               self.indent += 1;
               self.display_indent(0)?;
               write!(self.writer, "[")?;
@@ -690,11 +688,13 @@ impl<'h, W: Write> Displayer<'h, W> {
           write!(self.writer, "{}.buffer", ident)?;
         } else {
           let mut kind = ArrayBufferViewKind::Uint8Array;
-          for reference in &self.order {
-            if let HeapValue::ArrayBufferView(view) = reference.open(self.heap)
+          for view_reference in &self.order {
+            if let HeapValue::ArrayBufferView(view) =
+              view_reference.open(self.heap)
             {
               if view.buffer == *reference
                 && view.byte_offset % view.kind.byte_width() == 0
+                && view.kind != ArrayBufferViewKind::DataView
               {
                 kind = view.kind;
                 break;
@@ -729,7 +729,6 @@ impl<'h, W: Write> Displayer<'h, W> {
       }
       HeapValue::ArrayBufferView(view) => {
         let buffer_info = self.deps.get(&view.buffer).unwrap();
-        dbg!(buffer_info);
         let HeapValue::ArrayBuffer(buffer) = view.buffer.open(self.heap) else {
           unreachable!()
         };
@@ -768,7 +767,7 @@ impl<'h, W: Write> Displayer<'h, W> {
             let needs_end = end != backing_view.length;
             write!(self.writer, "{}.subarray(", ident)?;
             if start != 0 || needs_end {
-              write!(self.writer, ", {}", start)?;
+              write!(self.writer, "{}", start)?;
               if needs_end {
                 write!(self.writer, ", {}", end)?;
               }
@@ -800,8 +799,7 @@ impl<'h, W: Write> Displayer<'h, W> {
             || view.is_backed_by_rab)
             && !view.is_length_tracking;
           if view.byte_offset != 0 || needs_explicit_length {
-            let offset = view.byte_offset / view.kind.byte_width();
-            write!(self.writer, ", {}", offset)?;
+            write!(self.writer, ", {}", view.byte_offset)?;
             if needs_explicit_length {
               write!(self.writer, ", {}", view.length)?;
             }
@@ -821,13 +819,9 @@ impl<'h, W: Write> Displayer<'h, W> {
           } else {
             self.display_array_buffer_data_array(view.kind, buffer)?;
           }
-          let offset = view.byte_offset / view.kind.byte_width();
-          write!(
-            self.writer,
-            ").subarray({}, {})",
-            offset,
-            offset + view.length
-          )?;
+          let start = view.byte_offset / view.kind.byte_width();
+          let end = start + view.length;
+          write!(self.writer, ").subarray({}, {})", start, end)?;
         } else {
           assert!(!view.is_backed_by_rab);
           write!(self.writer, "new DataView(")?;

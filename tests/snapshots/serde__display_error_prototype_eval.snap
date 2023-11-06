@@ -1,0 +1,7 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew EvalError(\"foo\")"
+---
+const v0 = new EvalError("foo");
+v0["stack"] = "EvalError: foo\u{a}    at <anonymous>:1:1";
+v0

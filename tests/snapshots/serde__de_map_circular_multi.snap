@@ -1,0 +1,23 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst a = { m: new Map() }; a.m.set(1, a); a"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Object {
+        OneByte("m"): HeapReference(
+            *1,
+        ),
+    },
+    1: Map {
+        I32(
+            1,
+        ): HeapReference(
+            *0,
+        ),
+    },
+}
+

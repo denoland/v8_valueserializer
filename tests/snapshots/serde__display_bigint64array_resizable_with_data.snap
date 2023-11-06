@@ -3,8 +3,7 @@ source: tests/serde.rs
 description: "=== SOURCE ===\nconst a = new BigInt64Array(new ArrayBuffer(16, { maxByteLength: 24 })); a.set([1n, -2n]); a"
 ---
 const v0 = new ArrayBuffer(16, { maxByteLength: 24 });
-new Uint8Array(v0).set([
-  0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-  0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+new BigInt64Array(v0).set([
+  0x01n, -0x02n,
 ]);
 new BigInt64Array(v0)

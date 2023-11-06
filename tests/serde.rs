@@ -38,6 +38,8 @@ serde_test!(string_one_byte r#"'asd'"#);
 serde_test!(string_two_byte r#"'asd 🌎'"#);
 serde_test!(string_0_byte r#""è÷\u{0}""#);
 serde_test!(string_unpaired_surrogate r#""foo\ud800bar""#);
+serde_test!(string_escape_double_quote r#"'"'"#);
+serde_test!(string_escape_backslash r#""\\""#);
 
 // boolean primitive wrapper object
 serde_test!(boolean_primitive_true r#"new Boolean(true)"#);
@@ -108,6 +110,19 @@ arr
 "#);
 serde_test!(sparse_array_literal_with_hole r#"[1, 2, /* hole */, 4]"#);
 serde_test!(sparse_array_with_object r#"[/* hole */, {a: 2}]"#);
+serde_test!(sparse_array_circular_self r#"const arr = new Array(2); arr[0] = arr; arr"#);
+serde_test!(sparse_array_with_properties_ordered r#"
+const c = { };
+const b = { c };
+const a = { b };
+const arr = new Array(3);
+arr[2] = b; 
+arr.x = 1;
+arr.c = c;
+c.arr = arr;
+arr.foo = "bar";
+c
+"#);
 
 // dense array
 serde_test!(dense_array r#"[1, 2]"#);
@@ -119,7 +134,19 @@ const arr = ["asd", 1];
 arr.foo = "bar";
 arr
 "#);
+serde_test!(dense_array_with_properties_ordered r#"
+const c = { };
+const b = { c };
+const a = { b };
+const arr = ["asd", 1, b];
+arr.x = 1;
+arr.c = c;
+c.arr = arr;
+arr.foo = "bar";
+c
+"#);
 serde_test!(dense_array_with_object r#"[1, { a: true }]"#);
+serde_test!(dense_array_circular_self r#"const arr = [undefined]; arr[0] = arr; arr"#);
 
 // map
 serde_test!(map_empty r#"new Map()"#);
@@ -128,12 +155,16 @@ serde_test!(map_two_elements r#"new Map([["a", 1], ["b", 2]])"#);
 serde_test!(map_object_key r#"new Map([[{ a: true }, 1]])"#);
 serde_test!(map_object_value r#"new Map([[1, { b: true }]])"#);
 serde_test!(map_object_key_and_value r#"new Map([[{ a: true }, { b: true }]])"#);
+serde_test!(map_circular_self r#"const m = new Map(); m.set(1, m); m"#);
+serde_test!(map_circular_multi r#"const a = { m: new Map() }; a.m.set(1, a); a"#);
 
 // set
 serde_test!(set_empty r#"new Set()"#);
 serde_test!(set_one_element r#"new Set([1])"#);
 serde_test!(set_two_elements r#"new Set([1, 2])"#);
 serde_test!(set_object_element r#"new Set([{ a: true }])"#);
+serde_test!(set_circular_self r#"const s = new Set(); s.add(s); s"#);
+serde_test!(set_circular_multi r#"const a = { s: new Set() }; a.s.add(a); a"#);
 
 // arraybuffer
 serde_test!(arraybuffer_empty r#"new ArrayBuffer(0)"#);
@@ -289,6 +320,8 @@ serde_test!(dataview_resizable_with_data r#"const a = new DataView(new ArrayBuff
 
 // typed arrays
 serde_test!(typed_array_inline r#"const a = new Float64Array(6); [a, new Uint8Array(a.buffer).subarray(3, 4)]"#);
+serde_test!(typed_array_second_view_subarray r#"const a = new Uint8Array([1, 2]); [a, a.subarray(1, 2)]"#);
+serde_test!(data_view_second_view r#"const a = new DataView(new Uint8Array([1, 2]).buffer); [a, new DataView(a.buffer, 1, 1)]"#);
 
 // array buffer
 serde_test!(array_buffer_empty r#"new ArrayBuffer()"#);
@@ -298,13 +331,26 @@ serde_test!(indirect_array_buffer r#"const buf = new Uint8Array([1, 2, 3, 4, 5, 
 const foo = { buf };
 [foo, new Uint8Array(buf)];
 "#);
+serde_test!(array_buffer_with_multiple_views r#"const buf = new Uint16Array([1, 2, 3]); [new Uint16Array(buf.buffer, 2, 1), new Int16Array(buf.buffer, 4, 1)]"#);
 
 // circular reference
 serde_test!(circular_reference r#"const foo = {}; foo.foo = foo; foo"#);
 serde_test!(circular_reference_multi r#"const a = { b: {} }; a.b.a = a; a"#);
+serde_test!(circular_more_complicated r#"const c = {}; const b = { a: {}, c }; b.a.c = c; b.a.b = b; b.a"#);
 
 // error
 serde_test!(error r#"new Error("foo", { cause: 1 })"#);
 serde_test!(error_no_cause r#"new Error("foo")"#);
+serde_test!(error_no_message r#"new Error(undefined)"#);
+serde_test!(error_no_message_with_cause r#"new Error(undefined, { cause: 1 })"#);
+serde_test!(error_no_stack r#"const err = new Error(); delete err.stack; err"#);
 // V8 bug: https://bugs.chromium.org/p/v8/issues/detail?id=14433
 // serde_test!(error_cause_self r#"const err = new Error("foo"); err.cause = err; err"#);
+serde_test!(error_cause_multi_circular r#"const err = new Error("foo");  const a = { err }; err.cause = a; a"#);
+serde_test!(error_prototype_eval r#"new EvalError("foo")"#);
+serde_test!(error_prototype_range r#"new RangeError("foo")"#);
+serde_test!(error_prototype_reference r#"new ReferenceError("foo")"#);
+serde_test!(error_prototype_syntax r#"new SyntaxError("foo")"#);
+serde_test!(error_prototype_type r#"new TypeError("foo")"#);
+serde_test!(error_prototype_uri r#"new URIError("foo")"#);
+serde_test!(error_cause_obj r#"new Error("foo", { cause: { a: 1 } })"#);

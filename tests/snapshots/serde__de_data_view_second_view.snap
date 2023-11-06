@@ -1,0 +1,42 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst a = new DataView(new Uint8Array([1, 2]).buffer); [a, new DataView(a.buffer, 1, 1)]"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: DenseArray [
+        HeapReference(
+            *2,
+        ),
+        HeapReference(
+            *3,
+        ),
+    ] {},
+    1: ArrayBuffer {
+        data: [
+            1,
+            2,
+        ],
+        max_byte_length: None,
+    },
+    2: ArrayBufferView {
+        kind: DataView,
+        buffer: *1,
+        byte_offset: 0,
+        length: 2,
+        is_length_tracking: false,
+        is_backed_by_rab: false,
+    },
+    3: ArrayBufferView {
+        kind: DataView,
+        buffer: *1,
+        byte_offset: 1,
+        length: 1,
+        is_length_tracking: false,
+        is_backed_by_rab: false,
+    },
+}
+

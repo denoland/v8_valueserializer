@@ -1,0 +1,21 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew RangeError(\"foo\")"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Error {
+        name: RangeError,
+        message: Some(
+            OneByte("foo"),
+        ),
+        stack: Some(
+            OneByte("RangeError: foo\n    at <anonymous>:1:1"),
+        ),
+        cause: None,
+    },
+}
+

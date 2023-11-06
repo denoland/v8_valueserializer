@@ -627,15 +627,15 @@ impl HeapEq<DenseArray> for SparseArray {
       return false;
     }
 
-    for (key, value) in &left.value.properties {
-      if let Some((_, value)) =
-        right.value.properties.iter().find(|(k, _)| k == key)
+    for (left_key, left_value) in &left.value.properties {
+      if let Some((_, right_value)) =
+        right.value.properties.iter().find(|(k, _)| k == left_key)
       {
-        if left.next(value) != right.next(value) {
+        if left.next(left_value) != right.next(right_value) {
           return false;
         }
       } else {
-        let key = match key {
+        let key = match left_key {
           PropertyKey::I32(key) => Cow::Owned(key.to_string()),
           PropertyKey::U32(key) => Cow::Owned(key.to_string()),
           PropertyKey::Double(key) => Cow::Owned(key.to_string()),
@@ -647,7 +647,7 @@ impl HeapEq<DenseArray> for SparseArray {
         };
         if let Some(Some(right_value)) = &right.value.elements.get(key as usize)
         {
-          if left.next(value) != right.next(right_value) {
+          if left.next(left_value) != right.next(right_value) {
             return false;
           }
         } else {

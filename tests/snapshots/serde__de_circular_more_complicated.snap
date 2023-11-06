@@ -1,0 +1,28 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst c = {}; const b = { a: {}, c }; b.a.c = c; b.a.b = b; b.a"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Object {
+        OneByte("c"): HeapReference(
+            *1,
+        ),
+        OneByte("b"): HeapReference(
+            *2,
+        ),
+    },
+    1: Object {},
+    2: Object {
+        OneByte("a"): HeapReference(
+            *0,
+        ),
+        OneByte("c"): HeapReference(
+            *1,
+        ),
+    },
+}
+

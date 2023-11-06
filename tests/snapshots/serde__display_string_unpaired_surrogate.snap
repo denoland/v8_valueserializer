@@ -1,5 +1,5 @@
 ---
 source: tests/serde.rs
-description: "=== SOURCE ===\n'foo \\ud800 bar'"
+description: "=== SOURCE ===\n\"foo\\ud800bar\""
 ---
-"foo \u{d800} bar"
+"foo\u{d800}bar"

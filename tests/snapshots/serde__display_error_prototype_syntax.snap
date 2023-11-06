@@ -1,0 +1,7 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew SyntaxError(\"foo\")"
+---
+const v0 = new SyntaxError("foo");
+v0["stack"] = "SyntaxError: foo\u{a}    at <anonymous>:1:1";
+v0

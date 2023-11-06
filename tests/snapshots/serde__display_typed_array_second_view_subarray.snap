@@ -1,0 +1,11 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst a = new Uint8Array([1, 2]); [a, a.subarray(1, 2)]"
+---
+const v0 = new Uint8Array([
+  0x01, 0x02,
+]);
+[
+  v0,
+  v0.subarray(1),
+]

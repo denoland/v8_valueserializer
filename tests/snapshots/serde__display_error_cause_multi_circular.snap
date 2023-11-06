@@ -1,0 +1,11 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst err = new Error(\"foo\");  const a = { err }; err.cause = a; a"
+---
+const v0 = new Error("foo");
+v0["stack"] = "Error: foo\u{a}    at <anonymous>:1:13";
+const v1 = {
+  "err": v0,
+};
+v0["cause"] = v1;
+v1

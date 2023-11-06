@@ -1,0 +1,21 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew EvalError(\"foo\")"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Error {
+        name: EvalError,
+        message: Some(
+            OneByte("foo"),
+        ),
+        stack: Some(
+            OneByte("EvalError: foo\n    at <anonymous>:1:1"),
+        ),
+        cause: None,
+    },
+}
+

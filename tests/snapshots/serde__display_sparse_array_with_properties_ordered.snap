@@ -1,0 +1,17 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\n\nconst c = { };\nconst b = { c };\nconst a = { b };\nconst arr = new Array(3);\narr[2] = b; \narr.x = 1;\narr.c = c;\nc.arr = arr;\narr.foo = \"bar\";\nc\n"
+---
+const v0 = {
+  "c": undefined /* circular */,
+};
+const v1 = new Array(3);
+v1[2] = v0;
+v1["x"] = 1;
+const v2 = {
+  "arr": v1,
+};
+v0["c"] = v2;
+v1["c"] = v2;
+v1["foo"] = "bar";
+v2

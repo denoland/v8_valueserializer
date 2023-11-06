@@ -1,0 +1,46 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst buf = new Uint16Array([1, 2, 3]); [new Uint16Array(buf.buffer, 2, 1), new Int16Array(buf.buffer, 4, 1)]"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: DenseArray [
+        HeapReference(
+            *2,
+        ),
+        HeapReference(
+            *3,
+        ),
+    ] {},
+    1: ArrayBuffer {
+        data: [
+            1,
+            0,
+            2,
+            0,
+            3,
+            0,
+        ],
+        max_byte_length: None,
+    },
+    2: ArrayBufferView {
+        kind: Uint16Array,
+        buffer: *1,
+        byte_offset: 2,
+        length: 1,
+        is_length_tracking: false,
+        is_backed_by_rab: false,
+    },
+    3: ArrayBufferView {
+        kind: Int16Array,
+        buffer: *1,
+        byte_offset: 4,
+        length: 1,
+        is_length_tracking: false,
+        is_backed_by_rab: false,
+    },
+}
+

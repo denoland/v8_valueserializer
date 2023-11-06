@@ -3,8 +3,7 @@ source: tests/serde.rs
 description: "=== SOURCE ===\nconst foo = {}; foo.foo = foo; foo"
 ---
 const v0 = {
-  "foo": undefined /* circular */
-,
+  "foo": undefined /* circular */,
 };
 v0["foo"] = v0;
 v0

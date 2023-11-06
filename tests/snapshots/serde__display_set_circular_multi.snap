@@ -1,0 +1,11 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst a = { s: new Set() }; a.s.add(a); a"
+---
+const v0 = new Set([
+]);
+const v1 = {
+  "s": v0,
+};
+v0.add(v1);
+v1

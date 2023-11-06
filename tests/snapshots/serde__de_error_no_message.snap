@@ -1,0 +1,19 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nnew Error(undefined)"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Error {
+        name: Error,
+        message: None,
+        stack: Some(
+            OneByte("Error\n    at <anonymous>:1:1"),
+        ),
+        cause: None,
+    },
+}
+

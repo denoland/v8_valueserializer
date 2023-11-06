@@ -1,0 +1,30 @@
+---
+source: tests/serde.rs
+description: "=== SOURCE ===\nconst err = new Error(\"foo\");  const a = { err }; err.cause = a; a"
+---
+=== VALUE ===
+HeapReference(*0)
+
+=== HEAP ===
+Heap {
+    0: Object {
+        OneByte("err"): HeapReference(
+            *1,
+        ),
+    },
+    1: Error {
+        name: Error,
+        message: Some(
+            OneByte("foo"),
+        ),
+        stack: Some(
+            OneByte("Error: foo\n    at <anonymous>:1:13"),
+        ),
+        cause: Some(
+            HeapReference(
+                *0,
+            ),
+        ),
+    },
+}
+

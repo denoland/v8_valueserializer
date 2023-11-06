@@ -1,9 +1,9 @@
 ---
 source: tests/serde.rs
-description: "=== SOURCE ===\n'foo \\ud800 bar'"
+description: "=== SOURCE ===\n\"foo\\ud800bar\""
 ---
 === VALUE ===
-String(TwoByte("foo \u{d800} bar"))
+String(TwoByte("foo\u{d800}bar"))
 
 === HEAP ===
 Heap {}
