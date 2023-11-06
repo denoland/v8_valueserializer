@@ -796,9 +796,9 @@ impl<'h, W: Write> Displayer<'h, W> {
           write!(self.writer, "new {}({}", view.kind, ident)?;
           let length =
             (view.length * view.kind.byte_width()) + view.byte_offset;
-          let needs_explicit_length = (view.is_backed_by_rab
-            && !view.is_length_tracking)
-            || (length != buffer.byte_length() && !view.is_length_tracking);
+          let needs_explicit_length = (length != buffer.byte_length()
+            || view.is_backed_by_rab)
+            && !view.is_length_tracking;
           if view.byte_offset != 0 || needs_explicit_length {
             let offset = view.byte_offset / view.kind.byte_width();
             write!(self.writer, ", {}", offset)?;

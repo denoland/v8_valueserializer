@@ -37,7 +37,7 @@ serde_test!(string_empty r#"''"#);
 serde_test!(string_one_byte r#"'asd'"#);
 serde_test!(string_two_byte r#"'asd 🌎'"#);
 serde_test!(string_0_byte r#""è÷\u{0}""#);
-serde_test!(string_unpaired_surrogate r#"'foo \ud800 bar'"#);
+serde_test!(string_unpaired_surrogate r#""foo\ud800bar""#);
 
 // boolean primitive wrapper object
 serde_test!(boolean_primitive_true r#"new Boolean(true)"#);
