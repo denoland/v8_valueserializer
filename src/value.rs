@@ -1187,6 +1187,15 @@ pub struct Heap {
   values: Vec<HeapValue>,
 }
 
+impl Default for Heap {
+  fn default() -> Self {
+    Self {
+      heap_id: rand::thread_rng().gen(),
+      values: vec![],
+    }
+  }
+}
+
 impl std::fmt::Debug for Heap {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(f, "Heap ")?;
