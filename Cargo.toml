@@ -12,7 +12,6 @@ bitflags = "2.4.1"
 encoding_rs = "0.8"
 indexmap = "2.0.2"
 num-bigint = "0.4.4"
-rand = "0.8.5"
 serde = { version = "1", features = ["derive"] }
 thiserror = "1.0.49"
 wtf8 = "0.1.0"
