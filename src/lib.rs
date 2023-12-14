@@ -20,6 +20,7 @@ pub use crate::value::DenseArray;
 pub use crate::value::Error;
 pub use crate::value::ErrorName;
 pub use crate::value::Heap;
+pub use crate::value::HeapBuilder;
 pub use crate::value::HeapReference;
 pub use crate::value::HeapValue;
 pub use crate::value::Map;

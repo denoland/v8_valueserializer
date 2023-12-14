@@ -5,10 +5,13 @@ use std::fmt::Debug;
 use std::fmt::Display;
 use std::fmt::Write;
 use std::rc::Rc;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
 
 use num_bigint::BigInt;
-use rand::Rng;
 use thiserror::Error;
+
+static NEXT_HEAP_ID: AtomicU64 = AtomicU64::new(1);
 
 struct HeapEqContext<'a, 'b, T> {
   heap: &'a Heap,
@@ -1097,14 +1100,14 @@ impl HeapEq for Error {
 }
 
 pub struct HeapBuilder {
-  heap_id: usize,
+  heap_id: u64,
   values: Vec<Option<HeapValue>>,
 }
 
 impl Default for HeapBuilder {
   fn default() -> Self {
     Self {
-      heap_id: rand::thread_rng().gen(),
+      heap_id: NEXT_HEAP_ID.fetch_add(1, Ordering::Relaxed),
       values: vec![],
     }
   }
@@ -1183,17 +1186,8 @@ impl HeapBuilder {
 }
 
 pub struct Heap {
-  heap_id: usize,
+  heap_id: u64,
   values: Vec<HeapValue>,
-}
-
-impl Default for Heap {
-  fn default() -> Self {
-    Self {
-      heap_id: rand::thread_rng().gen(),
-      values: vec![],
-    }
-  }
 }
 
 impl std::fmt::Debug for Heap {
@@ -1228,7 +1222,7 @@ impl Heap {
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct HeapReference {
-  heap_id: usize,
+  heap_id: u64,
   index: usize,
 }
 
