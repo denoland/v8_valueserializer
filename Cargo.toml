@@ -1,6 +1,6 @@
 [package]
 name = "v8_valueserializer"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Rust implementation of V8's ValueSerializer and ValueDeserializer"
 authors = ["the Deno authors"]
 repository = "https://github.com/denoland/v8_valueserializer"
