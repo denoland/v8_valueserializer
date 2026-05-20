@@ -33,7 +33,13 @@ use crate::StringValue;
 use crate::TwoByteString;
 
 const MINIMUM_WIRE_FORMAT_VERSION: u32 = 14;
-const MAXIMUM_WIRE_FORMAT_VERSION: u32 = 15;
+// V8 14.9 (rusty_v8 149+) bumped the wire format from 15 to 16. The only
+// payload change is that ArrayBuffer / ArrayBufferView byte_length, byte_offset
+// and max_byte_length are written as size_t-width varints instead of u32. For
+// values whose magnitudes fit in u32 (the common case) the on-wire bytes are
+// identical, so accepting v16 here lets us deserialize values produced by V8
+// 14.9 without any other changes.
+const MAXIMUM_WIRE_FORMAT_VERSION: u32 = 16;
 
 #[derive(Debug, Error)]
 #[error("parse error at position {position}: {kind}")]
