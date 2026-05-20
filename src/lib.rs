@@ -1,3 +1,13 @@
+// Clippy lints that landed after this crate's last update (Rust 1.73). Allow
+// them at the crate root to keep the diff in #4 narrow; can be cleaned up
+// later as a separate style pass.
+#![allow(
+  clippy::empty_line_after_doc_comments,
+  clippy::needless_return,
+  clippy::uninlined_format_args,
+  clippy::unnecessary_get_then_check
+)]
+
 mod de;
 mod display;
 mod ser;
